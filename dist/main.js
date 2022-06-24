@@ -183,12 +183,13 @@ var ConversionValidationException = /** @class */ (function (_super) {
     return ConversionValidationException;
 }(Error));
 exports.standardFieldKeys = [
-    'cashAmountRequested',
-    'inKindAmountRequested',
-    'attention',
+    'amountRequested',
+    'inKindItems',
+    'careOf',
     'designation',
-    'decision2',
-    'reviewerFundingRecommendation'
+    'decision',
+    'reviewerRecommendedFundingAmount',
+    'specialHandling'
 ];
 var NodeType;
 (function (NodeType) {
@@ -264,11 +265,7 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
                 // console.info(JSONResponse);
             }
             catch (e) {
-                if (e instanceof ConversionValidationException) {
-                    // console.log(e);
-                    return;
-                }
-                throw e;
+                throw new ConversionValidationException(typings_1.ConversionExceptionTypes.UNKNOWN_ERROR_ADAPTING_COMP);
             }
         }
         function getValidationResult(customValidation) {
@@ -408,18 +405,25 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
     }
     function getFormulaFromBinaryExpressionNode(node, formDefs, compType) {
         var values = recursGetColumnsForMathString(node, formDefs, compType);
-        var adaptedValues = values.map(function (col) {
+        // if all values have items in array
+        var allValuesHaveData = values.every(function (v) { return v.length > 0; });
+        if (allValuesHaveData) {
+            var adaptedValues = values.map(function (col) {
+                return {
+                    value: col.join('.'),
+                    type: typings_1.FormulaStepValueType.ParentValue
+                };
+            });
             return {
-                value: col.join('.'),
-                type: typings_1.FormulaStepValueType.ParentValue
+                step: {
+                    type: 0,
+                    values: adaptedValues
+                }
             };
-        });
-        return {
-            step: {
-                type: 0,
-                values: adaptedValues
-            }
-        };
+        }
+        else {
+            throw new ConversionValidationException(typings_1.ConversionExceptionTypes.COMPONENT_NOT_ON_FORM);
+        }
     }
     function getSetValueFromJSString(node, parentNode, formDefs, compType) {
         if (node.type === NodeType.LITERAL) {
@@ -447,7 +451,7 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
             };
         }
         else {
-            // some type of error
+            throw new ConversionValidationException(typings_1.ConversionExceptionTypes.SET_VALUE_NODE_TYPE_NOT_LITERAL_OR_MEMBER_EXP);
         }
     }
     function getResultFromCalculateValueString(node, parentNode, formDefs, compType) {
@@ -507,9 +511,6 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
                     rightCondition
                 ];
             }
-            // if (compKey === 'referenceFields-financialcontent' || compKey === 'financialcontent') {
-            //   console.log(conditions)
-            // }
         }
         else {
         }
@@ -517,7 +518,7 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
         sourceColumn = getColumn(node, true, compKey, formDefs, compType);
         relatedColumn = getColumn(node, false, compKey, formDefs, compType);
         value = getValue(node);
-        useAnd = multipleConditionsCheck.useAnd;
+        useAnd = multipleConditionsCheck.useAnd || false;
         var response = {
             conditions: conditions,
             comparison: comparison,
@@ -525,13 +526,13 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
             relatedColumn: relatedColumn,
             value: value,
             identifier: nonce(),
-            useAnd: useAnd !== null && useAnd !== void 0 ? useAnd : false
+            useAnd: useAnd
         };
         // removes properties that are null or undefined
         Object.keys(response)
             .forEach(function (key) {
             var _a;
-            if (response[key] == null || !response[key] || !((_a = response[key]) === null || _a === void 0 ? void 0 : _a.length)) {
+            if ((response[key] == null || !response[key] || !((_a = response[key]) === null || _a === void 0 ? void 0 : _a.length)) && key !== 'useAnd') {
                 delete response[key];
             }
         });
@@ -545,25 +546,30 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
             return (_b = node.right.value) !== null && _b !== void 0 ? _b : null;
         }
     }
-    function checkForCompOnFormDefs(formDefs, prop) {
-        return formDefs.some(function (formDef) {
-            return formDef.components.some(function (component) {
-                console.log(component.key, prop);
-                return component.key == prop;
+    function getFormCompFromProp(formDefs, prop) {
+        var foundComp = undefined;
+        formDefs.find(function (formDef) {
+            eachComponent(formDef.components, function (comp) {
+                if (comp.key == prop) {
+                    foundComp = comp;
+                    return true;
+                }
             });
+            return foundComp;
         });
+        return foundComp;
     }
     function getColumn(node, evaluateLeft, compKey, formDefs, compType) {
-        var _a, _b, _c, _d;
+        var _a, _b, _c, _d, _e;
         // validate that it exists on form
         var logicalGroup = evaluateLeft ? node.left : node.right;
         var obj = (_b = (_a = logicalGroup === null || logicalGroup === void 0 ? void 0 : logicalGroup.object) === null || _a === void 0 ? void 0 : _a.name) !== null && _b !== void 0 ? _b : false;
-        var prop = (_d = (_c = logicalGroup === null || logicalGroup === void 0 ? void 0 : logicalGroup.property) === null || _c === void 0 ? void 0 : _c.name) !== null && _d !== void 0 ? _d : false;
+        var prop = (_e = (((_c = logicalGroup === null || logicalGroup === void 0 ? void 0 : logicalGroup.property) === null || _c === void 0 ? void 0 : _c.name) || ((_d = logicalGroup === null || logicalGroup === void 0 ? void 0 : logicalGroup.property) === null || _d === void 0 ? void 0 : _d.value))) !== null && _e !== void 0 ? _e : false;
         var root;
         if (obj && prop) {
-            var passes = checkForCompOnFormDefs(formDefs, prop);
-            if (passes) {
-                if (exports.standardFieldKeys.includes(prop)) {
+            var compFromForm = getFormCompFromProp(formDefs, prop);
+            if (compFromForm) {
+                if (exports.standardFieldKeys.includes(compFromForm.type)) {
                     root = 'application';
                 }
                 else {
@@ -572,7 +578,6 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
                 return [root, prop];
             }
             else {
-                console.log('no pass');
                 throw new ConversionValidationException(typings_1.ConversionExceptionTypes.COMPONENT_NOT_ON_FORM);
             }
         }
@@ -591,18 +596,18 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
         switch (operator) {
             case '==':
             case '===':
-                return 'eq';
+                return typings_1.FilterModalTypes.equals;
             case '!==':
             case '!=':
-                return 'ne';
+                return typings_1.FilterModalTypes.notEqual;
             case '>':
-                return 'gt';
+                return typings_1.FilterModalTypes.greaterThan;
             case '<':
-                return 'lt';
+                return typings_1.FilterModalTypes.lessThan;
             case '>=':
-                return 'ge';
+                return typings_1.FilterModalTypes.greaterThanOrEquals;
             case '<=':
-                return 'le';
+                return typings_1.FilterModalTypes.lessThanOrEquals;
         }
     }
     /**
@@ -714,7 +719,8 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
         if (node && node.test) {
             if ((evaluationNode === null || evaluationNode === void 0 ? void 0 : evaluationNode.type) === NodeType.IDENTIFIER) {
                 // this should be value
-                if (evaluationNode.name === "value") {
+                if (evaluationNode.name === "value" ||
+                    evaluationNode.name === 'input') {
                     validationChunk.type = 'value';
                     validationChunk.isValue = true;
                     validationChunk.columns = compType.split('-');
@@ -783,15 +789,6 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
         }
         return conversionOutcomeReport;
     }
-    /**
-     * TEST ME!
-     *
-     * (o)     (o)
-     *  '       '
-     *      W
-     *   _______
-     *  /       \
-     */
     function convertFormDefinitions(defs) {
         var conversionOutcomeReport = {};
         var conversionErrorReport = {};
@@ -876,7 +873,7 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
                 return formDef;
             }
             catch (e) {
-                // error adapting comp
+                throw new ConversionValidationException(typings_1.ConversionExceptionTypes.UNKNOWN_ERROR_ADAPTING_COMP);
             }
         });
         var result = {
@@ -886,7 +883,7 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
         };
         return result;
     }
-    var parserOptions, singleCondition, twoConditions, JS, testing, componentsWithoutJSResults, componentsWithValidationResults, validationResultsParsed, validationPasses, componentsWithDisplayResults, displayResultsParsed, displayPasses, componentsWithCalculateValueResults, calculateValueResultsParsed, calculateValuePasses, data;
+    var parserOptions, singleCondition, twoConditions, JS, testsPass, componentsWithoutJSResults, componentsWithValidationResults, validationResultsParsed, validationPasses, componentsWithDisplayResults, displayResultsParsed, displayPasses, componentsWithCalculateValueResults, calculateValueResultsParsed, calculateValuePasses, data;
     return __generator(this, function (_a) {
         parserOptions = {
             locations: true,
@@ -896,10 +893,8 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
         singleCondition = "valid = input <= 10000 ? true : 'Please enter an amount $10000 or less';";
         twoConditions = "show = (data.sumOfAggregateFields === 0.50 && data.sumOfAggregateFields === 1.50);true;";
         JS = singleCondition;
-        // take form definition and look for values here:
-        CustomLogicProps;
-        testing = true;
-        if (testing) {
+        testsPass = false;
+        try {
             componentsWithoutJSResults = convertArrayOfFormDefs(test_components_1.componentsWithoutCustomJS);
             // should have no results because no logic
             chai_1.expect(componentsWithoutJSResults.conversionErrorReport).to.equal('{}');
@@ -925,9 +920,19 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
             chai_1.expect(componentsWithCalculateValueResults.conversionErrorReport).to.equal('{}');
             // all conversions should pass
             chai_1.expect(calculateValuePasses).to.be.true;
+            test_components_1.testSets.forEach(function (testSet) {
+                var convertedTestSet = convertArrayOfFormDefs(testSet[0]);
+                var convertedTestSetParsed = JSON.parse(convertedTestSet.definition);
+                chai_1.expect(convertedTestSetParsed).to.deep.equal(testSet[1]);
+            });
+            testsPass = true;
+        }
+        catch (e) {
+            console.log(e);
+            testsPass = false;
         }
         data = [];
-        if (!testing) {
+        if (testsPass) {
             fs.createReadStream('/Users/drew.wyckoff/Projects/Node scripts/src/conversion_forms_qa.csv')
                 .pipe(csv_parser_1.default())
                 .on('data', function (chunk) {
@@ -935,11 +940,17 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
                     var formDef = JSON.parse(chunk.definition);
                     var arrayOfFormDef = formDef instanceof Array ? formDef : [formDef];
                     var conversionResult = convertArrayOfFormDefs(arrayOfFormDef);
-                    var result = __assign(__assign({}, chunk), conversionResult);
-                    data.push(result);
+                    if (conversionResult.conversionErrorReport !== '{}' ||
+                        conversionResult.conversionOutcomeReport !== '{}') {
+                        var result = __assign(__assign({}, chunk), conversionResult);
+                        data.push(result);
+                    }
                 }
                 catch (e) {
-                    // really bad error, can't even read it as a JSON object
+                    // unable to parse JSON for row
+                    var formId = JSON.parse(chunk.formId);
+                    console.log('unable to parse ID:', formId);
+                    // throw new ConversionValidationException(ConversionExceptionTypes.UNABLE_TO_PARSE_FOR_DEF)
                 }
             })
                 .on('end', function () {

@@ -15,7 +15,11 @@ export enum ConversionExceptionTypes {
   MISSING_ERROR_MESSAGE = "Missing error message",
   ERROR_MESSAGE_SETUP_INCORRECTLY = "Error message setup incorrectly",
   VALIDATION_STRING_IS_NOT_CONDITIONAL = "Validation string is not conditional",
-  COMPONENT_NOT_ON_FORM = "Component referenced is not on form"
+  COMPONENT_NOT_ON_FORM = "Component referenced is not on form",
+  UNABLE_TO_GET_FORMULA_VALUES = "Unable to get formula values",
+  SET_VALUE_NODE_TYPE_NOT_LITERAL_OR_MEMBER_EXP = "Set value node type is not literal or member expression",
+  UNABLE_TO_PARSE_FOR_DEF = "Unable to parse form def",
+  UNKNOWN_ERROR_ADAPTING_COMP = "Unknown error adapting component"
 }
 export interface ConversionErrorReport {
   [x: string]: {

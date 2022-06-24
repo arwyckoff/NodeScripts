@@ -19,6 +19,10 @@ var ConversionExceptionTypes;
     ConversionExceptionTypes["ERROR_MESSAGE_SETUP_INCORRECTLY"] = "Error message setup incorrectly";
     ConversionExceptionTypes["VALIDATION_STRING_IS_NOT_CONDITIONAL"] = "Validation string is not conditional";
     ConversionExceptionTypes["COMPONENT_NOT_ON_FORM"] = "Component referenced is not on form";
+    ConversionExceptionTypes["UNABLE_TO_GET_FORMULA_VALUES"] = "Unable to get formula values";
+    ConversionExceptionTypes["SET_VALUE_NODE_TYPE_NOT_LITERAL_OR_MEMBER_EXP"] = "Set value node type is not literal or member expression";
+    ConversionExceptionTypes["UNABLE_TO_PARSE_FOR_DEF"] = "Unable to parse form def";
+    ConversionExceptionTypes["UNKNOWN_ERROR_ADAPTING_COMP"] = "Unknown error adapting component";
 })(ConversionExceptionTypes = exports.ConversionExceptionTypes || (exports.ConversionExceptionTypes = {}));
 var ConversionOutcome;
 (function (ConversionOutcome) {

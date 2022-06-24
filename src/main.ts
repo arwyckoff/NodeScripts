@@ -2,8 +2,8 @@ import * as acorn from 'acorn';
 import { expect } from 'chai';
 import csv from 'csv-parser';
 import * as fs from 'fs';
-import { componentsWithCalculateValue, componentsWithDisplayJS, componentsWithoutCustomJS, componentsWithValidationJS } from './test-components';
-import { BaseApplicationForLogic, ConditionalLogicResultType, ConversionErrorReport, ConversionExceptionTypes, ConversionOutcome, ConversionOutcomeReport, CustomJSLogicType, CustomValidationFromConversion, EvaluationType, FormDefinitionComponent, FormulaStepValueType, GlobalLogicGroup, GlobalValueLogicGroup, LogicColumn, LogicCondition, LogicGroup, OutcomeItem } from './typings';
+import { componentsWithCalculateValue, componentsWithDisplayJS, componentsWithoutCustomJS, componentsWithValidationJS, testSets } from './test-components';
+import { BaseApplicationForLogic, ConditionalLogicResultType, ConversionErrorReport, ConversionExceptionTypes, ConversionOutcome, ConversionOutcomeReport, CustomJSLogicType, CustomValidationFromConversion, EvaluationType, FilterModalTypes, FormDefinitionComponent, FormulaStepValueType, GlobalLogicGroup, GlobalValueLogicGroup, LogicColumn, LogicCondition, LogicGroup, OutcomeItem } from './typings';
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
  /**
    * Call a function for each component in the list and their children.
@@ -108,12 +108,13 @@ class ConversionValidationException extends Error {
 }
 
 export const standardFieldKeys = [
-  'cashAmountRequested',
-  'inKindAmountRequested',
-  'attention',
+  'amountRequested',
+  'inKindItems',
+  'careOf',
   'designation',
-  'decision2',
-  'reviewerFundingRecommendation'
+  'decision',
+  'reviewerRecommendedFundingAmount',
+  'specialHandling'
 ]
 
 // ACORN TYPING
@@ -199,7 +200,6 @@ const JSParser: () => Promise<void> = async () => {
     formDefs: string[]
   ): {result: any, resultType: 'setValue'|'formula'|'display'|'validation'}|void {
     const parsed = acorn.Parser.parseExpressionAt(customJS, 0, parserOptions) as unknown as AcornNode;
-
     // first we have to check that the JS has a structure like "variable ="
     // if this is not the case, we log the errors
     checkFirstNode(parsed);
@@ -253,12 +253,9 @@ const JSParser: () => Promise<void> = async () => {
         }
         // console.info(JSONResponse);
       } catch (e) {
-        if (e instanceof ConversionValidationException) {
-          // console.log(e);
-          return;
-        }
-
-        throw e;
+        throw new ConversionValidationException(
+          ConversionExceptionTypes.UNKNOWN_ERROR_ADAPTING_COMP
+        );
       }
     }
 
@@ -439,17 +436,25 @@ const JSParser: () => Promise<void> = async () => {
 
   function getFormulaFromBinaryExpressionNode (node: AcornNode, formDefs: string[], compType: string): any {
     const values = recursGetColumnsForMathString(node, formDefs, compType);
-    const adaptedValues = values.map((col) => {
+    // if all values have items in array
+    const allValuesHaveData = values.every((v) => v.length > 0);
+    if (allValuesHaveData) {
+      const adaptedValues = values.map((col) => {
+        return {
+          value: col.join('.'),
+          type: FormulaStepValueType.ParentValue
+        }
+      })
       return {
-        value: col.join('.'),
-        type: FormulaStepValueType.ParentValue
+        step: {
+          type: 0,
+          values: adaptedValues
+        }
       }
-    })
-    return {
-      step: {
-        type: 0,
-        values: adaptedValues
-      }
+    } else {
+      throw new ConversionValidationException(
+        ConversionExceptionTypes.COMPONENT_NOT_ON_FORM
+      ); 
     }
   }
   function getSetValueFromJSString (
@@ -482,11 +487,12 @@ const JSParser: () => Promise<void> = async () => {
     }
 
     } else {
-      // some type of error
-      
+      throw new ConversionValidationException(
+        ConversionExceptionTypes.SET_VALUE_NODE_TYPE_NOT_LITERAL_OR_MEMBER_EXP
+      ); 
     }
-
   }
+
   function getResultFromCalculateValueString (
     node: AcornNode,
     parentNode: AcornNode,
@@ -567,16 +573,13 @@ const JSParser: () => Promise<void> = async () => {
           rightCondition
         ];
       }
-      // if (compKey === 'referenceFields-financialcontent' || compKey === 'financialcontent') {
-      //   console.log(conditions)
-      // }
     } else {
     }
     comparison = getComparison(node);
     sourceColumn = getColumn(node, true, compKey, formDefs, compType);
     relatedColumn = getColumn(node, false, compKey, formDefs, compType);
     value = getValue(node);
-    useAnd = multipleConditionsCheck.useAnd;
+    useAnd = multipleConditionsCheck.useAnd || false;
 
     let response =  {
       conditions,
@@ -585,12 +588,12 @@ const JSParser: () => Promise<void> = async () => {
       relatedColumn,
       value,
       identifier: nonce(),
-      useAnd: useAnd ?? false
+      useAnd
     } as any;
     // removes properties that are null or undefined
     Object.keys(response)
       .forEach((key: string) => {
-        if (response[key] == null || !response[key] || !response[key]?.length) {
+        if ((response[key] == null || !response[key] || !response[key]?.length) && key !== 'useAnd') {
 
           delete response[key];
         }
@@ -608,15 +611,23 @@ const JSParser: () => Promise<void> = async () => {
       return node.right.value ?? null;
     }
   }
-  function checkForCompOnFormDefs (
+  function getFormCompFromProp (
     formDefs: any[],
     prop: string
-  ) {
-    return formDefs.some((formDef) => {
-      return formDef.components.some((component: any) => {
-        return component.key == prop
+  ): FormDefinitionComponent|undefined {
+    let foundComp: FormDefinitionComponent|undefined = undefined;
+    formDefs.find((formDef) => {
+      eachComponent(formDef.components, (comp) => {
+        if (comp.key == prop) {
+          foundComp = comp;
+          return true;
+        }
       })
+
+      return foundComp;
     })
+
+    return foundComp;
   }
   function getColumn (
     node: AcornNode,
@@ -628,20 +639,19 @@ const JSParser: () => Promise<void> = async () => {
     // validate that it exists on form
     const logicalGroup = evaluateLeft ? node.left : node.right;
     const obj = logicalGroup?.object?.name ?? false;
-    const prop = logicalGroup?.property?.name ?? false;
+    const prop = (logicalGroup?.property?.name || logicalGroup?.property?.value) ?? false;
     let root: 'referenceFields'|'application';
 
     if (obj && prop) {
-      const passes = checkForCompOnFormDefs(formDefs, prop);
-      if (passes) {
-        if (standardFieldKeys.includes(prop)) {
+      const compFromForm = getFormCompFromProp(formDefs, prop);
+      if (compFromForm) {
+        if (standardFieldKeys.includes(compFromForm.type)) {
           root = 'application';
         } else {
           root = 'referenceFields';
         }
         return [root, prop];
       } else {
-        console.log('no pass')
         throw new ConversionValidationException(
           ConversionExceptionTypes.COMPONENT_NOT_ON_FORM
         );
@@ -663,18 +673,18 @@ const JSParser: () => Promise<void> = async () => {
     switch (operator) {
       case '==':
       case '===':
-        return 'eq';
+        return FilterModalTypes.equals;
       case '!==':
       case '!=':
-        return 'ne';
+        return FilterModalTypes.notEqual;
       case '>':
-        return 'gt';
+        return FilterModalTypes.greaterThan;
       case '<':
-        return 'lt';
+        return FilterModalTypes.lessThan;
       case '>=':
-        return 'ge';
+        return FilterModalTypes.greaterThanOrEquals;
       case '<=':
-        return 'le';
+        return FilterModalTypes.lessThanOrEquals;
     }
   }
   /**
@@ -753,12 +763,11 @@ const JSParser: () => Promise<void> = async () => {
     return guidResponse;
   }
   // take form definition and look for values here:
-  CustomLogicProps;
   // for each of these with a value, pass component to method that removes CustomLogicProps data and replaces it with our logic
   // method should take component and type of logic
   // UNIT TESTS
-  const testing = true;
-  if (testing) {
+  let testsPass = false;
+  try {
 
     // components without any custom JS
     const componentsWithoutJSResults = convertArrayOfFormDefs(componentsWithoutCustomJS as any);
@@ -807,10 +816,22 @@ const JSParser: () => Promise<void> = async () => {
     expect(componentsWithCalculateValueResults.conversionErrorReport).to.equal('{}');
     // all conversions should pass
     expect(calculateValuePasses).to.be.true;
+    testSets.forEach((testSet) => {
+      const convertedTestSet = convertArrayOfFormDefs(
+        testSet[0] as any
+      );
+      const convertedTestSetParsed = JSON.parse(convertedTestSet.definition);
+      expect(convertedTestSetParsed).to.deep.equal(testSet[1])
+
+    })
+    testsPass = true;
+  } catch (e) {
+    console.log(e)
+    testsPass = false;
   }
   // CONVERSION
   let data: any[] = [];
-  if (!testing) {
+  if (testsPass) {
     fs.createReadStream(
       '/Users/drew.wyckoff/Projects/Node scripts/src/conversion_forms_qa.csv'
     )
@@ -821,13 +842,20 @@ const JSParser: () => Promise<void> = async () => {
   
           const arrayOfFormDef = formDef instanceof Array ? formDef : [formDef];
           let conversionResult = convertArrayOfFormDefs(arrayOfFormDef);
-          const result = {
-            ...chunk,
-            ...conversionResult
+          if (conversionResult.conversionErrorReport !== '{}' ||
+              conversionResult.conversionOutcomeReport !== '{}'
+          ) {
+            
+            const result = {
+              ...chunk,
+              ...conversionResult
+            }
+            data.push(result)
           }
-          data.push(result)
         } catch (e) {
-          // really bad error, can't even read it as a JSON object
+          // unable to parse JSON for row
+          const formId = JSON.parse(chunk.formId)
+          console.log('unable to parse ID:', formId)
         }
       })
       .on('end', () => {
@@ -922,7 +950,10 @@ const JSParser: () => Promise<void> = async () => {
     if (node && node.test) {
       if (evaluationNode?.type === NodeType.IDENTIFIER) {
         // this should be value
-        if (evaluationNode.name === "value") {
+        if (
+          evaluationNode.name === "value" || 
+          evaluationNode.name === 'input'
+        ) {
           validationChunk.type = 'value';
           validationChunk.isValue = true;
           validationChunk.columns = compType.split('-');
@@ -994,16 +1025,6 @@ const JSParser: () => Promise<void> = async () => {
       
       return conversionOutcomeReport;
   }
-
-  /**
-   * TEST ME!
-   * 
-   * (o)     (o)
-   *  '       '
-   *      W
-   *   _______
-   *  /       \ 
-   */
 
   function convertFormDefinitions (defs: any[]) {
     const conversionOutcomeReport: ConversionOutcomeReport = {};
@@ -1113,26 +1134,13 @@ const JSParser: () => Promise<void> = async () => {
                 comp.type,
                 ConversionExceptionTypes.UNKOWN_ERROR
               )
-            }
-            // add error with addConversionOutcomeToReport
-            // use switch case based 
-            // if e.instance of
-            // console.log(e);
-            // convert e into something useful for conversion outcome report
-            // addConversionOutcomeToReport(
-            //   conversionOutcomeReport,
-            //   comp.type,
-            //   ConversionOutcome.FAILURE,
-            //   null
-            // )
-            
+            }            
           }
         });
-        // save adaptedComps to csv
 
         return formDef
       } catch (e) {
-        // error adapting comp
+        throw new ConversionValidationException(ConversionExceptionTypes.UNKNOWN_ERROR_ADAPTING_COMP)
       }
     });
     const result = {
@@ -1146,34 +1154,4 @@ const JSParser: () => Promise<void> = async () => {
 };
 
 JSParser();
-
-// GC TYPING
-
-
-// EX CONDITION
-// conditions: [
-//   {
-//     comparison: "ge"
-//     identifier: "ff7b60a69813411ba70c56bd605e2c1d761bf0182ee7411d94110645157e2413"
-//     relatedColumn: null
-//     sourceColumn: ["referenceFields", "sumOfAggregateFields"]
-//     0: "referenceFields"
-//     1: "sumOfAggregateFields"
-//     useAnd: false
-//     value: "4"
-//   }
-// ]
-// evaluationType: 0
-// identifier: "e954d145187145d48b262e427c5783eb426bd90445aa4df2968331214eb4c860"
-// useAnd: false
-
-// NOTES
-
-// show
-// valid
-//  -- right side should be binary, logical, or conditional expression
-
-
-// value
-//  -- right side should be binary, logical, or conditional expression
 
