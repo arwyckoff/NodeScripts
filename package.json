@@ -1,0 +1,30 @@
+{
+  "name": "node-scripts",
+  "version": "1.0.0",
+  "description": "learning Node",
+  "main": "index.js",
+  "scripts": {
+    "test": "test",
+    "build": "tsc",
+    "start": "NODE_OPTIONS=--max_old_space_size=6144 node ./dist/main.js",
+    "prestart": "npm run build"
+  },
+  "author": "Drew Wyckoff",
+  "license": "ISC",
+  "devDependencies": {
+    "playwright": "^1.12.2",
+    "typescript": "^4.3.4"
+  },
+  "dependencies": {
+    "@types/acorn": "^4.0.6",
+    "@types/chai": "^4.3.1",
+    "acorn": "^8.7.1",
+    "axios": "^0.21.1",
+    "chai": "^4.3.6",
+    "csv": "^6.1.3",
+    "csv-parser": "^3.0.0",
+    "csv-stringify": "^6.1.3",
+    "csv-writer": "^1.6.0",
+    "nodemon": "^2.0.12"
+  }
+}

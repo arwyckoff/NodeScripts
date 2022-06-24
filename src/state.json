@@ -1,0 +1,12 @@
+{
+  "origins": [{
+    "origin": "https://yourcausegrantsqa.com",
+    "localStorage": [{
+      "name": "_yc_adminClientIdentifier",
+      "value": "04e7c57d-54df-4dbd-96e8-a28cdb93c360"
+    },{
+      "name": "_yc_adminUser",
+      "value": "{\"token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJhNGI0YzNjZS0yZGIwLTQ2ZDQtYjI2My02NGZlNDBiNmEyOGYiLCJzdWIiOiIxMDUxNjEiLCJlbWFpbCI6IkRyZXcuV3lja29mZkBibGFja2JhdWQuY29tIiwiZ2l2ZW5fbmFtZSI6IkRyZXciLCJmYW1pbHlfbmFtZSI6Ild5Y2tvZmYiLCJ0eXAiOiJBZG1pblBvcnRhbCIsIlVzZXJJZCI6IjEwNTE2MSIsInN5c3RlbV9wZXJtaXNzaW9ucyI6IjEsIDIsIDMsIDQsIDUsIDYsIDcsIDgsIDksIDEwLCAxMSwgMTIsIDEzLCAxNSwgMTYsIDE3LCAxOCIsImV4cCI6MTYyNTA3OTcxMCwiaXNzIjoiaHR0cHM6Ly95Yy1xYS1nYy1hcGkud2VicmVkaXJlY3Qub3JnIiwiYXVkIjoiaHR0cHM6Ly95Yy1xYS1nYy1hcGkud2VicmVkaXJlY3Qub3JnIn0.Z_OrB-52PCR8AkvzzX0iz0gT5OipxrOvqR_erFs_fe8\",\"expiration\":\"2021-06-30T19:01:50.5671032Z\",\"requirePasswordReset\":false,\"refreshToken\":\"TPEWjpAddDQ90SGXfePCf5M53JiYoVJKg/yTErKQmr83b64JuPedslXvQG4OBAmIM+vOpJS8fWIrGpy56R0xrIe9L29BbfGWcAvqcP6799BqWlMN84D0Wt+kYQved2owsMwumtOhqxhMbZykxswtGxkNaj7vLpKoys49fwktay4=\",\"refreshTokenExpiration\":\"2021-06-30T19:21:50.5671032Z\"}"
+    }]
+  }]
+}
