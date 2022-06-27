@@ -1,9 +1,13 @@
 import * as acorn from 'acorn';
 import { expect } from 'chai';
+import chaiExclude from 'chai-exclude';
 import csv from 'csv-parser';
 import * as fs from 'fs';
 import { componentsWithCalculateValue, componentsWithDisplayJS, componentsWithoutCustomJS, componentsWithValidationJS, testSets } from './test-components';
 import { BaseApplicationForLogic, ConditionalLogicResultType, ConversionErrorReport, ConversionExceptionTypes, ConversionOutcome, ConversionOutcomeReport, CustomJSLogicType, CustomValidationFromConversion, EvaluationType, FilterModalTypes, FormDefinitionComponent, FormulaStepValueType, GlobalLogicGroup, GlobalValueLogicGroup, LogicColumn, LogicCondition, LogicGroup, OutcomeItem } from './typings';
+const chai = require('chai')
+chai.use(chaiExclude)
+
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
  /**
    * Call a function for each component in the list and their children.
@@ -258,12 +262,24 @@ const JSParser: () => Promise<void> = async () => {
         );
       }
     }
-
+    function getAdaptedValue (
+      value: string
+    ) {
+      let adaptedValue: string|boolean = value;
+      if (typeof(value) === 'string') {
+        adaptedValue = value;
+      } else if (typeof(value) === 'number') {
+        adaptedValue = '' + value;
+      }
+      
+      return adaptedValue;
+    }
     function getValidationResult(
       customValidation: CustomValidationFromConversion
     ) {
+      // TODO: check that value should be a string here
       const value = customValidation.leftChunk?.type == 'literal' ? customValidation.leftChunk?.literalVal : customValidation.rightChunk?.type == 'literal' ? customValidation.rightChunk?.literalVal : null;
-
+      const adaptedValue = value ? getAdaptedValue(value) : null;
       const validationResult = {
         evaluationType: EvaluationType.ConditionallyTrue,
         useAnd: false,
@@ -272,12 +288,17 @@ const JSParser: () => Promise<void> = async () => {
           sourceColumn: customValidation.leftChunk?.columns,
           comparison: customValidation.comparison,
           identifier: nonce(),
-          value,
-          relatedColumn: customValidation.rightChunk?.columns
+          value: adaptedValue,
+          relatedColumn: customValidation.rightChunk?.columns,
+          useAnd: false
         }],
         resultType: ConditionalLogicResultType.VALIDATION_MESSAGE,
         result: customValidation.errorMsg
       };
+      // should remove related column if empty array
+      if (!validationResult.conditions[0].relatedColumn?.length) {
+        delete validationResult.conditions[0].relatedColumn
+      }
       return validationResult;
     }
   }
@@ -402,7 +423,7 @@ const JSParser: () => Promise<void> = async () => {
     compkey: string,
     formDefs: string[]
   ) :GlobalLogicGroup<BaseApplicationForLogic> {
-    const conditions = getConditionsFromJSString(
+    let conditions = getConditionsFromJSString(
       node,
       parentNode,
       compType,
@@ -410,6 +431,7 @@ const JSParser: () => Promise<void> = async () => {
       0,
       formDefs
     ) as any;
+
     return {
         evaluationType: EvaluationType.ConditionallyTrue,
         useAnd: false,
@@ -535,13 +557,6 @@ const JSParser: () => Promise<void> = async () => {
       node,
       parentNode
     );
-    // if (compKey === 'referenceFields-financialcontent' || compKey === 'financialcontent') {
-    //   console.log(multipleConditionsCheck.isMultipleConditions)
-
-      // asdf === 'asdf' || (asdf === 'asdf' || asdf === 'asdf')
-      // asdf || asdf || asdf
-
-    // }
     if (multipleConditionsCheck.isMultipleConditions) {
       let left = node.left;
       let right = node.right;
@@ -594,11 +609,9 @@ const JSParser: () => Promise<void> = async () => {
     Object.keys(response)
       .forEach((key: string) => {
         if ((response[key] == null || !response[key] || !response[key]?.length) && key !== 'useAnd') {
-
           delete response[key];
         }
       });
-
     return response;
   }
 
@@ -694,7 +707,6 @@ const JSParser: () => Promise<void> = async () => {
    */
   function checkForMultipleConditions (node: AcornNode, parentNode: AcornNode) {
     const useAnd = parentNode.operator === AcornOperator.AND;
-
     return {
       isMultipleConditions: node.operator == AcornOperator.OR || node.operator === AcornOperator.AND,
       useAnd
@@ -768,7 +780,6 @@ const JSParser: () => Promise<void> = async () => {
   // UNIT TESTS
   let testsPass = false;
   try {
-
     // components without any custom JS
     const componentsWithoutJSResults = convertArrayOfFormDefs(componentsWithoutCustomJS as any);
     // should have no results because no logic
@@ -816,13 +827,22 @@ const JSParser: () => Promise<void> = async () => {
     expect(componentsWithCalculateValueResults.conversionErrorReport).to.equal('{}');
     // all conversions should pass
     expect(calculateValuePasses).to.be.true;
-    testSets.forEach((testSet) => {
+    testSets.forEach((testSet, index) => {
       const convertedTestSet = convertArrayOfFormDefs(
         testSet[0] as any
       );
-      const convertedTestSetParsed = JSON.parse(convertedTestSet.definition);
-      expect(convertedTestSetParsed).to.deep.equal(testSet[1])
-
+      const convertedTestSetParsed = JSON.parse(convertedTestSet.definition)[0].components;
+      // maybe add check for each type of logic and then compare?
+      if (convertedTestSetParsed[0].formula) {
+        expect(convertedTestSetParsed[0].formula).excluding('identifier').to.deep.equal(testSet[1][0].components[0].formula)
+      }
+      if (convertedTestSetParsed[0].customValidation) {
+        expect(convertedTestSetParsed[0].customValidation.conditions).excluding('identifier').to.deep.equal(testSet[1][0].components[0].customValidation?.conditions)
+      }
+      if (convertedTestSetParsed[0].conditionalLogic) {
+        console.log(convertedTestSetParsed[0].conditionalLogic, testSet[1][0].components[0].conditionalLogic )
+        expect(convertedTestSetParsed[0].conditionalLogic.conditions).excluding('identifier').to.deep.equal(testSet[1][0].components[0].conditionalLogic?.conditions)
+      }
     })
     testsPass = true;
   } catch (e) {
@@ -1105,7 +1125,7 @@ const JSParser: () => Promise<void> = async () => {
                 );
                 if (customValidation) {
                   // if custom validation chunk is value, map to ref field prop
-                  comp.customValidation = customValidation as any;
+                  comp.customValidation = customValidation.result as any;
                   delete comp.calculateValue;
                   addConversionOutcomeToReport(
                     conversionOutcomeReport,
@@ -1122,7 +1142,6 @@ const JSParser: () => Promise<void> = async () => {
             // console.log(e)
             const error = e as any;
             if ('errorType' in error) {
-              // console.log(error.errorType)
               addConversionErrorToReport(
                 conversionErrorReport,
                 comp.type,

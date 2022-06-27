@@ -92,10 +92,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AcornOperator = exports.NodeType = exports.standardFieldKeys = void 0;
 var acorn = __importStar(require("acorn"));
 var chai_1 = require("chai");
+var chai_exclude_1 = __importDefault(require("chai-exclude"));
 var csv_parser_1 = __importDefault(require("csv-parser"));
 var fs = __importStar(require("fs"));
 var test_components_1 = require("./test-components");
 var typings_1 = require("./typings");
+var chai = require('chai');
+chai.use(chai_exclude_1.default);
 var createCsvWriter = require('csv-writer').createObjectCsvWriter;
 /**
   * Call a function for each component in the list and their children.
@@ -268,9 +271,21 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
                 throw new ConversionValidationException(typings_1.ConversionExceptionTypes.UNKNOWN_ERROR_ADAPTING_COMP);
             }
         }
+        function getAdaptedValue(value) {
+            var adaptedValue = value;
+            if (typeof (value) === 'string') {
+                adaptedValue = value;
+            }
+            else if (typeof (value) === 'number') {
+                adaptedValue = '' + value;
+            }
+            return adaptedValue;
+        }
         function getValidationResult(customValidation) {
-            var _a, _b, _c, _d, _e, _f;
+            var _a, _b, _c, _d, _e, _f, _g;
+            // TODO: check that value should be a string here
             var value = ((_a = customValidation.leftChunk) === null || _a === void 0 ? void 0 : _a.type) == 'literal' ? (_b = customValidation.leftChunk) === null || _b === void 0 ? void 0 : _b.literalVal : ((_c = customValidation.rightChunk) === null || _c === void 0 ? void 0 : _c.type) == 'literal' ? (_d = customValidation.rightChunk) === null || _d === void 0 ? void 0 : _d.literalVal : null;
+            var adaptedValue = value ? getAdaptedValue(value) : null;
             var validationResult = {
                 evaluationType: typings_1.EvaluationType.ConditionallyTrue,
                 useAnd: false,
@@ -279,12 +294,17 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
                         sourceColumn: (_e = customValidation.leftChunk) === null || _e === void 0 ? void 0 : _e.columns,
                         comparison: customValidation.comparison,
                         identifier: nonce(),
-                        value: value,
-                        relatedColumn: (_f = customValidation.rightChunk) === null || _f === void 0 ? void 0 : _f.columns
+                        value: adaptedValue,
+                        relatedColumn: (_f = customValidation.rightChunk) === null || _f === void 0 ? void 0 : _f.columns,
+                        useAnd: false
                     }],
                 resultType: typings_1.ConditionalLogicResultType.VALIDATION_MESSAGE,
                 result: customValidation.errorMsg
             };
+            // should remove related column if empty array
+            if (!((_g = validationResult.conditions[0].relatedColumn) === null || _g === void 0 ? void 0 : _g.length)) {
+                delete validationResult.conditions[0].relatedColumn;
+            }
             return validationResult;
         }
     }
@@ -387,7 +407,7 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
             evaluationType: typings_1.EvaluationType.ConditionallyTrue,
             useAnd: false,
             identifier: nonce(),
-            conditions: [conditions]
+            conditions: conditions
         };
     }
     function recursGetColumnsForMathString(node, formDefs, compType) {
@@ -479,11 +499,6 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
         var value;
         var useAnd;
         var multipleConditionsCheck = checkForMultipleConditions(node, parentNode);
-        // if (compKey === 'referenceFields-financialcontent' || compKey === 'financialcontent') {
-        //   console.log(multipleConditionsCheck.isMultipleConditions)
-        // asdf === 'asdf' || (asdf === 'asdf' || asdf === 'asdf')
-        // asdf || asdf || asdf
-        // }
         if (multipleConditionsCheck.isMultipleConditions) {
             var left = node.left;
             var right = node.right;
@@ -836,7 +851,7 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
                                 var customValidation = convertCustomJS(cleanValidationString, typings_1.CustomJSLogicType.VALIDITY, comp.type, (_d = comp.validate) === null || _d === void 0 ? void 0 : _d.customMessage, comp.key, defs);
                                 if (customValidation) {
                                     // if custom validation chunk is value, map to ref field prop
-                                    comp.customValidation = customValidation;
+                                    comp.customValidation = customValidation.result;
                                     delete comp.calculateValue;
                                     addConversionOutcomeToReport(conversionOutcomeReport, comp.type, typings_1.ConversionOutcome.SUCCESS, typings_1.CustomJSLogicType.VALIDITY);
                                 }
@@ -850,26 +865,13 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
                         // console.log(e)
                         var error = e;
                         if ('errorType' in error) {
-                            // console.log(error.errorType)
                             addConversionErrorToReport(conversionErrorReport, comp.type, error.errorType);
                         }
                         else {
                             addConversionErrorToReport(conversionErrorReport, comp.type, typings_1.ConversionExceptionTypes.UNKOWN_ERROR);
                         }
-                        // add error with addConversionOutcomeToReport
-                        // use switch case based 
-                        // if e.instance of
-                        // console.log(e);
-                        // convert e into something useful for conversion outcome report
-                        // addConversionOutcomeToReport(
-                        //   conversionOutcomeReport,
-                        //   comp.type,
-                        //   ConversionOutcome.FAILURE,
-                        //   null
-                        // )
                     }
                 });
-                // save adaptedComps to csv
                 return formDef;
             }
             catch (e) {
@@ -920,10 +922,21 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
             chai_1.expect(componentsWithCalculateValueResults.conversionErrorReport).to.equal('{}');
             // all conversions should pass
             chai_1.expect(calculateValuePasses).to.be.true;
-            test_components_1.testSets.forEach(function (testSet) {
+            test_components_1.testSets.forEach(function (testSet, index) {
+                var _a, _b;
                 var convertedTestSet = convertArrayOfFormDefs(testSet[0]);
-                var convertedTestSetParsed = JSON.parse(convertedTestSet.definition);
-                chai_1.expect(convertedTestSetParsed).to.deep.equal(testSet[1]);
+                var convertedTestSetParsed = JSON.parse(convertedTestSet.definition)[0].components;
+                // maybe add check for each type of logic and then compare?
+                if (convertedTestSetParsed[0].formula) {
+                    chai_1.expect(convertedTestSetParsed[0].formula).excluding('identifier').to.deep.equal(testSet[1][0].components[0].formula);
+                }
+                if (convertedTestSetParsed[0].customValidation) {
+                    chai_1.expect(convertedTestSetParsed[0].customValidation.conditions).excluding('identifier').to.deep.equal((_a = testSet[1][0].components[0].customValidation) === null || _a === void 0 ? void 0 : _a.conditions);
+                }
+                if (convertedTestSetParsed[0].conditionalLogic) {
+                    console.log(convertedTestSetParsed[0].conditionalLogic, testSet[1][0].components[0].conditionalLogic);
+                    chai_1.expect(convertedTestSetParsed[0].conditionalLogic.conditions).excluding('identifier').to.deep.equal((_b = testSet[1][0].components[0].conditionalLogic) === null || _b === void 0 ? void 0 : _b.conditions);
+                }
             });
             testsPass = true;
         }
@@ -950,7 +963,6 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
                     // unable to parse JSON for row
                     var formId = JSON.parse(chunk.formId);
                     console.log('unable to parse ID:', formId);
-                    // throw new ConversionValidationException(ConversionExceptionTypes.UNABLE_TO_PARSE_FOR_DEF)
                 }
             })
                 .on('end', function () {
@@ -993,27 +1005,4 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
     });
 }); };
 JSParser();
-// GC TYPING
-// EX CONDITION
-// conditions: [
-//   {
-//     comparison: "ge"
-//     identifier: "ff7b60a69813411ba70c56bd605e2c1d761bf0182ee7411d94110645157e2413"
-//     relatedColumn: null
-//     sourceColumn: ["referenceFields", "sumOfAggregateFields"]
-//     0: "referenceFields"
-//     1: "sumOfAggregateFields"
-//     useAnd: false
-//     value: "4"
-//   }
-// ]
-// evaluationType: 0
-// identifier: "e954d145187145d48b262e427c5783eb426bd90445aa4df2968331214eb4c860"
-// useAnd: false
-// NOTES
-// show
-// valid
-//  -- right side should be binary, logical, or conditional expression
-// value
-//  -- right side should be binary, logical, or conditional expression
 //# sourceMappingURL=main.js.map
