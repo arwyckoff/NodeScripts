@@ -19,7 +19,10 @@ export enum ConversionExceptionTypes {
   UNABLE_TO_GET_FORMULA_VALUES = "Unable to get formula values",
   SET_VALUE_NODE_TYPE_NOT_LITERAL_OR_MEMBER_EXP = "Set value node type is not literal or member expression",
   UNABLE_TO_PARSE_FOR_DEF = "Unable to parse form def",
-  UNKNOWN_ERROR_ADAPTING_COMP = "Unknown error adapting component"
+  UNKNOWN_ERROR_ADAPTING_COMP = "Unknown error adapting component",
+  FORMULA_MUST_BE_ADDITIONS = "Formula must be addition",
+  UNABLE_TO_INFER_FORM_FORMAT = "Unable to infer form format",
+  CALL_EXPRESSIONS_NOT_SUPPORTED = "Call expressions not supported"
 }
 export interface ConversionErrorReport {
   [x: string]: {

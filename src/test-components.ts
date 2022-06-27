@@ -172,20 +172,105 @@ export const componentsWithCalculateValueResult: FormDefinition[] = [
         type: 'referenceFields-fieldOne',
         defaultVal: '',
         formula: {
-          property: 'referenceFields.fieldOne', step: {
-            step: {
-              type: 0, values: [{ value: 'referenceFields.fieldOne', type: 2 },
-              { value: 'referenceFields.fieldOne', type: 2 },
-              { value: 'referenceFields.fieldOne', type: 2 },
-              { value: 'referenceFields.fieldOne', type: 2 },
-              { value: 'referenceFields.fieldOne', type: 2 },
-              { value: 'referenceFields.fieldOne', type: 2 }]
-            }
+          property: 'referenceFields.fieldOne',
+          step: {
+            type: 0, values: [{ value: 'referenceFields.fieldOne', type: 2 },
+            { value: 'referenceFields.fieldOne', type: 2 },
+            { value: 'referenceFields.fieldOne', type: 2 },
+            { value: 'referenceFields.fieldOne', type: 2 },
+            { value: 'referenceFields.fieldOne', type: 2 },
+            { value: 'referenceFields.fieldOne', type: 2 }]
           }
         }
       }
     ]
   }]
+  export const componentsWithCalculateValueSingle: FormDefinition[] = [
+    {
+      "logic": null,
+      "index": 0,
+      "components": [
+        {
+          "input": true,
+          "customConditional": "show = data.fieldOne == ''",
+          "inputMask": "",
+          "label": "Date of Incident",
+          "key": "fieldOne",
+          "placeholder": "",
+          "prefix": "",
+          "suffix": "",
+          "defaultValue": "",
+          "hidden": false,
+          "clearOnHide": true,
+          "validate": {
+            "required": false,
+            "minLength": 1,
+            "maxLength": 2,
+            "pattern": "",
+            "custom": ""
+          },
+          "conditional": {
+            "show": "",
+            "when": "",
+            "eq": ""
+          },
+          "type": "referenceFields-fieldOne",
+          "defaultVal": ""
+        }
+      ]
+    }
+  ]
+  export const componentsWithCalculateValueSingleConverted: FormDefinition[] = [
+    {
+      "logic": null,
+      "index": 0,
+      "components": [
+        {
+          "input": true,
+          "inputMask": "",
+          "label": "Date of Incident",
+          "key": "fieldOne",
+          "placeholder": "",
+          "prefix": "",
+          "suffix": "",
+          "defaultValue": "",
+          "hidden": false,
+          "clearOnHide": true,
+          "conditionalLogic": {
+            "evaluationType": 0,
+            "useAnd": false,
+            "identifier": "c93bd02965e948d4b2577143a401094ad8f7dd37404a4306bf2019d782730c3e",
+            "conditions": [
+              {
+                "sourceColumn": [
+                  "referenceFields",
+                  "fieldOne"
+                ],
+                "comparison": "eq" as FilterModalTypes.equals,
+                "useAnd": false,
+                "identifier": "563aab06ff054d74a52e8858e19aab24c8d2f98db0dd448295cb47941d5abf95",
+                "value": ""
+              }
+            ]
+          },
+          "validate": {
+            "required": false,
+            "minLength": 1,
+            "maxLength": 2,
+            "pattern": "",
+            "custom": ""
+          },
+          "conditional": {
+            "show": "",
+            "when": "",
+            "eq": ""
+          },
+          "type": "referenceFields-fieldOne",
+          "defaultVal": ""
+        }
+      ]
+    }
+  ]
   export const componentsWithCustomValidation: FormDefinition[] = [
     {
       "logic": null,
@@ -360,9 +445,80 @@ export const componentsWithCalculateValueResult: FormDefinition[] = [
       ]
     }
   ]
+
+  export const componentsWithCalculateValueLikeSetValue: FormDefinition[] = [
+    {
+      "logic": null,
+      "index": 0,
+      "components": [
+        {
+          "input": true,
+          "inputMask": "",
+          "calculateValue": "value = data.fieldOne",
+          "label": "Date of Incident",
+          "key": "fieldOne",
+          "placeholder": "",
+          "prefix": "",
+          "suffix": "",
+          "defaultValue": "",
+          "hidden": false,
+          "clearOnHide": true,
+          "conditional": {
+            "show": "",
+            "when": "",
+            "eq": ""
+          },
+          "type": "referenceFields-fieldOne",
+          "defaultVal": ""
+        }
+      ]
+    }
+  ]
+  export const componentsWithCalculateValueLikeSetValueResult: FormDefinition[] = [
+    {
+      "logic": null,
+      "index": 0,
+      "components": [
+        {
+          "input": true,
+          "inputMask": "",
+          "conditionalValue": [
+            {
+              "conditions": [],
+              "evaluationType": 2,
+              "identifier": "5366e03085fd467c986b0e91189cf86b7109d29a8bc9427baaf64c8aa4a2af7c",
+              "result": [
+                "referenceFields",
+                "fieldOne"
+              ],
+              "resultType": 1,
+              "useAnd": false
+            }
+          ],
+          "label": "Date of Incident",
+          "key": "fieldOne",
+          "placeholder": "",
+          "prefix": "",
+          "suffix": "",
+          "defaultValue": "",
+          "hidden": false,
+          "clearOnHide": true,
+          "conditional": {
+            "show": "",
+            "when": "",
+            "eq": ""
+          },
+          "type": "referenceFields-fieldOne",
+          "defaultVal": ""
+        }
+      ]
+    }
+  ]
 export const testSets: [FormDefinition[], FormDefinition[]][] = [
+  // [
   // input,
   // expected
+  // ]
 
   [
     componentsWithCalculateValue,
@@ -375,449 +531,13 @@ export const testSets: [FormDefinition[], FormDefinition[]][] = [
   [
     componentsWithCustomConditional,
     componentsWithCustomConditionalConverted
+  ],
+  [
+    componentsWithCalculateValueLikeSetValue,
+    componentsWithCalculateValueLikeSetValueResult
+  ],
+  [
+    componentsWithCalculateValueSingle,
+    componentsWithCalculateValueSingleConverted
   ]
 ]
-
-
-
-// // this one has all three custom JS types
-// const QA_FORM: FormDefinition[] = [
-//   {
-//     "tabName": "Page One",
-//     "components": [
-//       {
-//         "key": "number3",
-//         "label": "Amount Requested - In Progress",
-//         "type": "referenceFields-amountRequestedInProgress",
-//         "placeholder": "",
-//         "validate": {
-//           "required": false,
-//           "customMessage": ""
-//         },
-//         "tooltip": "",
-//         "title": "",
-//         "legend": "",
-//         "description": "",
-//         "prefix": "",
-//         "suffix": "",
-//         "displayType": 1,
-//         "value": 0,
-//         "customValidation": {
-//           "evaluationType": 2,
-//           "useAnd": false,
-//           "identifier": "a18abf4be2b5412d986556dc1d3602995d29dafa018e400d93f564d2e2a56751",
-//           "conditions": [],
-//           "result": "",
-//           "resultType": 0
-//         },
-//         "conditionalLogic": {
-//           "evaluationType": 2,
-//           "useAnd": false,
-//           "identifier": "37616f087c064785b95e8e24b6e99067a8ecda6bbc6a49b7b6eec5950437ce7e",
-//           "conditions": []
-//         },
-//         "conditionalValue": [],
-//         "errorLabel": "",
-//         "formula": {
-//           "property": "referenceFields.amountRequestedInProgress",
-//           "step": {
-//             "type": 0,
-//             "values": [
-//               {
-//                 "value": "referenceFields.amountAwardedYearToDate",
-//                 "type": 2
-//               },
-//               {
-//                 "value": "referenceFields.amountAwardedYearToDate",
-//                 "type": 2
-//               }
-//             ]
-//           }
-//         },
-//         "isHidden": false,
-//         "hiddenFromParent": false,
-//         "useCustomCurrency": 1
-//       },
-//       {
-//         "key": "number2",
-//         "label": "Amount Awarded - Year to date",
-//         "type": "referenceFields-amountAwardedYearToDate",
-//         "placeholder": "",
-//         "validate": {
-//           "required": false,
-//           "customMessage": ""
-//         },
-//         "tooltip": "",
-//         "title": "",
-//         "legend": "",
-//         "description": "",
-//         "prefix": "",
-//         "suffix": "",
-//         "displayType": 1,
-//         "value": null,
-//         "customValidation": {
-//           "evaluationType": 2,
-//           "useAnd": false,
-//           "identifier": "52a8817e70054c7f949620795be8ac3a10501e6580c642a99df0c73420ab4b9f",
-//           "conditions": [],
-//           "result": "",
-//           "resultType": 0
-//         },
-//         "conditionalLogic": {
-//           "evaluationType": 2,
-//           "useAnd": false,
-//           "identifier": "aa6a4a403f104bdb94c2555a0db02f8059ef69f598634fe6b4777a5f7baeaa93",
-//           "conditions": []
-//         },
-//         "conditionalValue": [
-//           {
-//             "evaluationType": 2,
-//             "useAnd": false,
-//             "identifier": "6a0012fa2f9d4e178024d7443c067457838f5b9ac7a94b0e8cda0e9c72e4a942",
-//             "conditions": [],
-//             "result": 2,
-//             "resultType": 0,
-//             "delete": false
-//           }
-//         ],
-//         "errorLabel": "",
-//         "isHidden": false,
-//         "hiddenFromParent": false,
-//         "useCustomCurrency": 1
-//       },
-//       {
-//         "key": "customDataTable",
-//         "label": "Color picker",
-//         "type": "referenceFields-colorPicker",
-//         "placeholder": "",
-//         "validate": {
-//           "required": false,
-//           "customMessage": ""
-//         },
-//         "tooltip": "",
-//         "title": "",
-//         "legend": "",
-//         "description": "",
-//         "prefix": "",
-//         "suffix": "",
-//         "displayType": 1,
-//         "value": "",
-//         "customConditional": "show = data.sumOfAggregateFields >= 6;",
-//         "customValidation": {
-//           "evaluationType": 0,
-//           "useAnd": false,
-//           "identifier": "9d2513226c534ccbbb22ed23e66c6ab0e29efd23a4a24b339558534217cf9f70",
-//           "conditions": [
-//             {
-//               "sourceColumn": [
-//                 "application",
-//                 "amountRequested"
-//               ],
-//               "comparison": "eq",
-//               "useAnd": false,
-//               "identifier": "946cf197fea642ea9ddf79b32d2823650ba9c950385f4ad6bcac206565476abe",
-//               "value": "12",
-//               "relatedColumn": null
-//             }
-//           ],
-//           "resultType": 2,
-//           "result": "this is not right"
-//         },
-//         "conditionalLogic": {
-//           "evaluationType": 2,
-//           "useAnd": false,
-//           "identifier": "8a1403f35b29473c804893a151d6eda0952355347ea54b8bb55a92ecffd6b3e4",
-//           "conditions": []
-//         },
-//         "conditionalValue": [],
-//         "errorLabel": "",
-//         "isHidden": true,
-//         "hiddenFromParent": false,
-//         "useCustomCurrency": 1
-//       },
-//       {
-//         "key": "number",
-//         "label": "Sum of fields",
-//         "type": "referenceFields-sumOfAggregateFields",
-//         "placeholder": "",
-//         "validate": {
-//           "required": false,
-//           "custom": "valid = value > 5 ? true : 'value must be greater than 5'",
-//           "customPrivate": false,
-//           "customMessage": "",
-//           "validationResult": null
-//         },
-//         "tooltip": "",
-//         "title": "",
-//         "legend": "",
-//         "description": "",
-//         "prefix": "",
-//         "suffix": "",
-//         "displayType": 1,
-//         "value": 6,
-//         "calculateValue": "value = 6;",
-//         "customValidation": {
-//           "evaluationType": 2,
-//           "useAnd": false,
-//           "identifier": "7be9e8c99d9f46d7b4dbda08387cc570a9544cbe47ef4bd5841f5ab7905c3121",
-//           "conditions": [],
-//           "result": "",
-//           "resultType": 0
-//         },
-//         "conditionalLogic": {
-//           "evaluationType": 2,
-//           "useAnd": false,
-//           "identifier": "0621ee219ce249d2959403fa10d609b4baa6124ac7074e9b95a9b9b6e0195014",
-//           "conditions": []
-//         },
-//         "conditionalValue": [],
-//         "errorLabel": "",
-//         "isHidden": false,
-//         "hiddenFromParent": false,
-//         "useCustomCurrency": 1
-//       }
-//     ],
-//     "uniqueId": "053b30c7-1b22-4a95-936f-f26a2db1a234",
-//     "index": 0,
-//     "logic": null
-//   }
-// ]
-
-// const QA_FORM_Converted: FormDefinition[] = [
-//         {
-//           "tabName": "Page One",
-//           "components": [
-//             {
-//               "key": "number3",
-//               "label": "Amount Requested - In Progress",
-//               "type": "referenceFields-amountRequestedInProgress",
-//               "placeholder": "",
-//               "validate": {
-//                 "required": false,
-//                 "customMessage": ""
-//               },
-//               "tooltip": "",
-//               "title": "",
-//               "legend": "",
-//               "description": "",
-//               "prefix": "",
-//               "suffix": "",
-//               "displayType": 1,
-//               "value": 0,
-//               "customValidation": {
-//                 "evaluationType": 2,
-//                 "useAnd": false,
-//                 "identifier": "a18abf4be2b5412d986556dc1d3602995d29dafa018e400d93f564d2e2a56751",
-//                 "conditions": [],
-//                 "result": "",
-//                 "resultType": 0
-//               },
-//               "conditionalLogic": {
-//                 "evaluationType": 2,
-//                 "useAnd": false,
-//                 "identifier": "37616f087c064785b95e8e24b6e99067a8ecda6bbc6a49b7b6eec5950437ce7e",
-//                 "conditions": []
-//               },
-//               "conditionalValue": [],
-//               "errorLabel": "",
-//               "formula": {
-//                 "property": "referenceFields.amountRequestedInProgress",
-//                 "step": {
-//                   "type": 0,
-//                   "values": [
-//                     {
-//                       "value": "referenceFields.amountAwardedYearToDate",
-//                       "type": 2
-//                     },
-//                     {
-//                       "value": "referenceFields.amountAwardedYearToDate",
-//                       "type": 2
-//                     }
-//                   ]
-//                 }
-//               },
-//               "isHidden": false,
-//               "hiddenFromParent": false,
-//               "useCustomCurrency": 1
-//             },
-//             {
-//               "key": "number2",
-//               "label": "Amount Awarded - Year to date",
-//               "type": "referenceFields-amountAwardedYearToDate",
-//               "placeholder": "",
-//               "validate": {
-//                 "required": false,
-//                 "customMessage": ""
-//               },
-//               "tooltip": "",
-//               "title": "",
-//               "legend": "",
-//               "description": "",
-//               "prefix": "",
-//               "suffix": "",
-//               "displayType": 1,
-//               "value": "",
-//               "customValidation": {
-//                 "evaluationType": 2,
-//                 "useAnd": false,
-//                 "identifier": "52a8817e70054c7f949620795be8ac3a10501e6580c642a99df0c73420ab4b9f",
-//                 "conditions": [],
-//                 "result": "",
-//                 "resultType": 0
-//               },
-//               "conditionalLogic": {
-//                 "evaluationType": 2,
-//                 "useAnd": false,
-//                 "identifier": "aa6a4a403f104bdb94c2555a0db02f8059ef69f598634fe6b4777a5f7baeaa93",
-//                 "conditions": []
-//               },
-//               "conditionalValue": [
-//                 {
-//                   "evaluationType": 2,
-//                   "useAnd": false,
-//                   "identifier": "6a0012fa2f9d4e178024d7443c067457838f5b9ac7a94b0e8cda0e9c72e4a942",
-//                   "conditions": [],
-//                   "result": [
-//                     "application",
-//                     "amountRequested"
-//                   ],
-//                   "resultType": 1,
-//                   "delete": false
-//                 }
-//               ],
-//               "errorLabel": "",
-//               "isHidden": false,
-//               "hiddenFromParent": false,
-//               "useCustomCurrency": 1
-//             },
-//             {
-//               "key": "customDataTable",
-//               "label": "Color picker",
-//               "type": "referenceFields-colorPicker",
-//               "placeholder": "",
-//               "validate": {
-//                 "required": false,
-//                 "customMessage": ""
-//               },
-//               "tooltip": "",
-//               "title": "",
-//               "legend": "",
-//               "description": "",
-//               "prefix": "",
-//               "suffix": "",
-//               "displayType": 1,
-//               "value": "",
-//               "customConditional": "",
-//               "customValidation": {
-//                 "evaluationType": 0,
-//                 "useAnd": false,
-//                 "identifier": "9d2513226c534ccbbb22ed23e66c6ab0e29efd23a4a24b339558534217cf9f70",
-//                 "conditions": [
-//                   {
-//                     "sourceColumn": [
-//                       "application",
-//                       "amountRequested"
-//                     ],
-//                     "comparison": "eq",
-//                     "useAnd": false,
-//                     "identifier": "946cf197fea642ea9ddf79b32d2823650ba9c950385f4ad6bcac206565476abe",
-//                     "value": "12",
-//                     "relatedColumn": null
-//                   }
-//                 ],
-//                 "resultType": 2,
-//                 "result": "this is not right"
-//               },
-//               "conditionalLogic": {
-//                 "evaluationType": 0,
-//                 "useAnd": false,
-//                 "identifier": "8a1403f35b29473c804893a151d6eda0952355347ea54b8bb55a92ecffd6b3e4",
-//                 "conditions": [
-//                   {
-//                     "sourceColumn": [
-//                       "referenceFields",
-//                       "sumOfAggregateFields"
-//                     ],
-//                     "comparison": "eq",
-//                     "useAnd": false,
-//                     "identifier": "a85ad996aa814fe883ce6813d720945579f99b2f22f14d72ac938220e3e3778b",
-//                     "value": "2",
-//                     "relatedColumn": null
-//                   },
-//                   {
-//                     "sourceColumn": [
-//                       "referenceFields",
-//                       "sumOfAggregateFields"
-//                     ],
-//                     "comparison": "eq",
-//                     "useAnd": false,
-//                     "identifier": "493cc0e72d4e4b2a8eeb75f7fb21f2e6a31e45f8a72d48f5ae5bedca127e3df6",
-//                     "value": "3",
-//                     "relatedColumn": null
-//                   },
-//                   {
-//                     "sourceColumn": [
-//                       "referenceFields",
-//                       "sumOfAggregateFields"
-//                     ],
-//                     "comparison": "eq",
-//                     "useAnd": false,
-//                     "identifier": "8df757b6068c463eb2b2f5e65c8804817729a18e07a74734bd8a5a3eefad3ab6",
-//                     "value": "4",
-//                     "relatedColumn": null
-//                   }
-//                 ]
-//               },
-//               "conditionalValue": [],
-//               "errorLabel": "",
-//               "isHidden": true,
-//               "hiddenFromParent": false,
-//               "useCustomCurrency": 1
-//             },
-//             {
-//               "key": "number",
-//               "label": "Sum of fields",
-//               "type": "referenceFields-sumOfAggregateFields",
-//               "placeholder": "",
-//               "validate": {
-//                 "required": false,
-//                 "custom": "valid = value > 5 ? true : 'value must be greater than 5'",
-//                 "customPrivate": false,
-//                 "customMessage": "",
-//                 "validationResult": null
-//               },
-//               "tooltip": "",
-//               "title": "",
-//               "legend": "",
-//               "description": "",
-//               "prefix": "",
-//               "suffix": "",
-//               "displayType": 1,
-//               "value": 6,
-//               "calculateValue": "value = 6;",
-//               "customValidation": {
-//                 "evaluationType": 2,
-//                 "useAnd": false,
-//                 "identifier": "7be9e8c99d9f46d7b4dbda08387cc570a9544cbe47ef4bd5841f5ab7905c3121",
-//                 "conditions": [],
-//                 "result": "",
-//                 "resultType": 0
-//               },
-//               "conditionalLogic": {
-//                 "evaluationType": 2,
-//                 "useAnd": false,
-//                 "identifier": "0621ee219ce249d2959403fa10d609b4baa6124ac7074e9b95a9b9b6e0195014",
-//                 "conditions": []
-//               },
-//               "conditionalValue": [],
-//               "errorLabel": "",
-//               "isHidden": false,
-//               "hiddenFromParent": false,
-//               "useCustomCurrency": 1
-//             }
-//           ],
-//           "uniqueId": "053b30c7-1b22-4a95-936f-f26a2db1a234",
-//           "index": 0,
-//           "logic": null
-//         }
-//       ]

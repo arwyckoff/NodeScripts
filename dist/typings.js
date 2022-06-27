@@ -23,6 +23,9 @@ var ConversionExceptionTypes;
     ConversionExceptionTypes["SET_VALUE_NODE_TYPE_NOT_LITERAL_OR_MEMBER_EXP"] = "Set value node type is not literal or member expression";
     ConversionExceptionTypes["UNABLE_TO_PARSE_FOR_DEF"] = "Unable to parse form def";
     ConversionExceptionTypes["UNKNOWN_ERROR_ADAPTING_COMP"] = "Unknown error adapting component";
+    ConversionExceptionTypes["FORMULA_MUST_BE_ADDITIONS"] = "Formula must be addition";
+    ConversionExceptionTypes["UNABLE_TO_INFER_FORM_FORMAT"] = "Unable to infer form format";
+    ConversionExceptionTypes["CALL_EXPRESSIONS_NOT_SUPPORTED"] = "Call expressions not supported";
 })(ConversionExceptionTypes = exports.ConversionExceptionTypes || (exports.ConversionExceptionTypes = {}));
 var ConversionOutcome;
 (function (ConversionOutcome) {
