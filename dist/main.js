@@ -95,6 +95,7 @@ var chai_1 = require("chai");
 var chai_exclude_1 = __importDefault(require("chai-exclude"));
 var csv_parser_1 = __importDefault(require("csv-parser"));
 var fs = __importStar(require("fs"));
+var form_field_type_map_1 = require("./form_field_type_map");
 var test_components_1 = require("./test-components");
 var typings_1 = require("./typings");
 var chai = require('chai');
@@ -234,7 +235,7 @@ var AcornOperator;
 // replace "input" with the actual referenceFields-blahblah
 // for  validation, result type will be ConditionalLogicResultType.ValidationMessage
 var JSParser = function () { return __awaiter(void 0, void 0, void 0, function () {
-    function convertCustomJS(customJS, logicType, compType, customMessage, compKey, formDefs) {
+    function convertCustomJS(customJS, logicType, compType, customMessage, compKey, formDefs, testing) {
         var parsed = acorn.Parser.parseExpressionAt(customJS, 0, parserOptions);
         // first we have to check that the JS has a structure like "variable ="
         // if this is not the case, we log the errors
@@ -248,19 +249,16 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
             try {
                 switch (logicType) {
                     case typings_1.CustomJSLogicType.DISPLAY:
-                        var conditionalLogic = convertJSStringToLogicGroup(parsed.right, parsed, compType, compKey, formDefs);
-                        if (compType === 'referenceFields-explainTheVolunteerWorkYouHaveDoneThisCurrentYear') {
-                            console.log(conditionalLogic);
-                        }
+                        var conditionalLogic = convertJSStringToLogicGroup(parsed.right, parsed, compType, compKey, formDefs, testing);
                         return {
                             result: conditionalLogic,
                             resultType: 'display'
                         };
                     case typings_1.CustomJSLogicType.CALCULATED_VALUE:
-                        var result = getResultFromCalculateValueString(parsed.right, parsed, formDefs, compType);
+                        var result = getResultFromCalculateValueString(parsed.right, parsed, formDefs, compType, compKey, testing);
                         return result;
                     case typings_1.CustomJSLogicType.VALIDITY:
-                        var customValidation = convertJSStringToCustomValidation(parsed.right, compType, customMessage, formDefs);
+                        var customValidation = convertJSStringToCustomValidation(parsed.right, compType, customMessage, formDefs, compKey, testing);
                         // the value may be on the left or right node or may be null
                         var validationResult = getValidationResult(customValidation);
                         return {
@@ -342,7 +340,7 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
         }
         return type;
     }
-    function convertJSStringToCustomValidation(node, compType, customMessage, formDefs) {
+    function convertJSStringToCustomValidation(node, compType, customMessage, formDefs, compKey, testing) {
         var _a, _b, _c, _d, _e;
         // ex. "valid = data.thing1 > value ? true : 'this is not right"
         var comparison;
@@ -356,8 +354,8 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
                     node.consequent.type === NodeType.LITERAL &&
                     node.alternate.type === NodeType.LITERAL) {
                     // get column or static value from left
-                    leftChunk = getValidationChunk(node, true, compType, formDefs);
-                    rightChunk = getValidationChunk(node, false, compType, formDefs);
+                    leftChunk = getValidationChunk(node, true, compType, formDefs, compKey, testing);
+                    rightChunk = getValidationChunk(node, false, compType, formDefs, compKey, testing);
                     comparison = getComparison(node.test);
                 }
                 else {
@@ -406,8 +404,8 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
             errorMsg: errorMsg
         };
     }
-    function convertJSStringToLogicGroup(node, parentNode, compType, compkey, formDefs) {
-        var conditions = getConditionsFromJSString(node, parentNode, compType, compkey, 0, formDefs);
+    function convertJSStringToLogicGroup(node, parentNode, compType, compkey, formDefs, testing) {
+        var conditions = getConditionsFromJSString(node, parentNode, compType, compkey, 0, formDefs, testing, false);
         var flattenedConditions;
         if (conditions === null || conditions === void 0 ? void 0 : conditions.conditions) {
             flattenedConditions = __assign({}, conditions);
@@ -422,15 +420,15 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
         }
         return flattenedConditions;
     }
-    function recursGetColumnsForMathString(node, formDefs, compType) {
+    function recursGetColumnsForMathString(node, formDefs, compType, compKey, testing) {
         var values = [];
         if (node.left.left && node.left.operator === AcornOperator.PLUS) {
-            var baseCol = getColumn(node, false, undefined, formDefs, compType);
-            values.push.apply(values, __spreadArray(__spreadArray([], recursGetColumnsForMathString(node.left, formDefs, compType)), [baseCol]));
+            var baseCol = getColumn(node, false, compKey, formDefs, compType, testing, true);
+            values.push.apply(values, __spreadArray(__spreadArray([], recursGetColumnsForMathString(node.left, formDefs, compType, compKey, testing)), [baseCol]));
         }
         else if (node.operator === AcornOperator.PLUS) {
-            var leftCol = getColumn(node, true, undefined, formDefs, compType);
-            var rightCol = getColumn(node, false, undefined, formDefs, compType);
+            var leftCol = getColumn(node, true, compKey, formDefs, compType, testing, true);
+            var rightCol = getColumn(node, false, compKey, formDefs, compType, testing, true);
             values.push(leftCol, rightCol);
         }
         else {
@@ -439,8 +437,8 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
         }
         return values;
     }
-    function getFormulaFromBinaryExpressionNode(node, formDefs, compType) {
-        var values = recursGetColumnsForMathString(node, formDefs, compType);
+    function getFormulaFromBinaryExpressionNode(node, formDefs, compType, compKey, testing) {
+        var values = recursGetColumnsForMathString(node, formDefs, compType, compKey, testing);
         // if all values have items in array
         var allValuesHaveData = values.every(function (v) { return v.length > 0; });
         if (allValuesHaveData) {
@@ -461,7 +459,7 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
             throw new ConversionValidationException(typings_1.ConversionExceptionTypes.COMPONENT_NOT_ON_FORM);
         }
     }
-    function getSetValueFromJSString(node, parentNode, formDefs, compType) {
+    function getSetValueFromJSString(node, parentNode, formDefs, compType, compKey, testing) {
         if (node.type === NodeType.LITERAL) {
             // if type is Literal, this is set value and is static
             // this will end up using conditional value
@@ -476,7 +474,7 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
         }
         else if (node.type === NodeType.MEMBER_EXPRESSION) {
             // if type is memberExpression, this is setting to the value of another field like value = data.thing1, this is set value and is based on another form field
-            var column = getColumn(parentNode, false, undefined, formDefs, compType);
+            var column = getColumn(parentNode, false, compKey, formDefs, compType, testing, true);
             return {
                 conditions: [],
                 evaluationType: typings_1.EvaluationType.AlwaysTrue,
@@ -490,24 +488,24 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
             throw new ConversionValidationException(typings_1.ConversionExceptionTypes.SET_VALUE_NODE_TYPE_NOT_LITERAL_OR_MEMBER_EXP);
         }
     }
-    function getResultFromCalculateValueString(node, parentNode, formDefs, compType) {
+    function getResultFromCalculateValueString(node, parentNode, formDefs, compType, compKey, testing) {
         var result;
         if (node.type === NodeType.BINARY_EXPRESSION) {
-            result = getFormulaFromBinaryExpressionNode(node, formDefs, compType);
+            result = getFormulaFromBinaryExpressionNode(node, formDefs, compType, compKey, testing);
             return {
                 result: result,
                 resultType: 'formula'
             };
         }
         else {
-            result = getSetValueFromJSString(node, parentNode, formDefs, compType);
+            result = getSetValueFromJSString(node, parentNode, formDefs, compType, compKey, testing);
             return {
                 result: result,
                 resultType: 'setValue'
             };
         }
     }
-    function getConditionsFromJSString(node, parentNode, compType, compKey, depth, formDefs) {
+    function getConditionsFromJSString(node, parentNode, compType, compKey, depth, formDefs, testing, needToCompareTypes) {
         var conditions;
         var comparison;
         var sourceColumn;
@@ -518,8 +516,8 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
         if (multipleConditionsCheck.isMultipleConditions) {
             var left = node.left;
             var right = node.right;
-            var leftCondition = left ? getConditionsFromJSString(left, node, compType, compKey, depth + 1, formDefs) : [];
-            var rightCondition = right ? getConditionsFromJSString(right, node, compType, compKey, depth + 1, formDefs) : [];
+            var leftCondition = left ? getConditionsFromJSString(left, node, compType, compKey, depth + 1, formDefs, testing, needToCompareTypes) : [];
+            var rightCondition = right ? getConditionsFromJSString(right, node, compType, compKey, depth + 1, formDefs, testing, needToCompareTypes) : [];
             conditions = [
                 leftCondition,
                 rightCondition
@@ -549,8 +547,8 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
             }
         }
         comparison = getComparison(node);
-        sourceColumn = getColumn(node, true, compKey, formDefs, compType);
-        relatedColumn = getColumn(node, false, compKey, formDefs, compType);
+        sourceColumn = getColumn(node, true, compKey, formDefs, compType, testing, needToCompareTypes);
+        relatedColumn = getColumn(node, false, compKey, formDefs, compType, testing, needToCompareTypes);
         value = getValue(node);
         useAnd = multipleConditionsCheck.useAnd || false;
         var response = {
@@ -580,20 +578,82 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
             return (_b = node.right.value) !== null && _b !== void 0 ? _b : null;
         }
     }
-    function getFormCompFromProp(formDefs, prop) {
+    function getFormatByTypeOrField(refFieldType, compType) {
+        if (refFieldType) {
+            switch (refFieldType) {
+                default:
+                case typings_1.ReferenceFieldTypes.TextArea:
+                case typings_1.ReferenceFieldTypes.TextField:
+                    return 'text';
+                case typings_1.ReferenceFieldTypes.SelectBoxes:
+                case typings_1.ReferenceFieldTypes.CustomDataTable:
+                case typings_1.ReferenceFieldTypes.Radio:
+                    return 'select';
+                case typings_1.ReferenceFieldTypes.Checkbox:
+                    return 'checkbox';
+                case typings_1.ReferenceFieldTypes.Date:
+                    return 'date';
+                case typings_1.ReferenceFieldTypes.Number:
+                    return 'number';
+                case typings_1.ReferenceFieldTypes.Currency:
+                    return 'currency';
+            }
+        }
+        else if (compType) {
+            switch (compType) {
+                default:
+                case 'careOf':
+                case 'designation':
+                    return 'text';
+                case 'amountRequested':
+                case 'reviewerRecommendedFundingAmount':
+                    return 'currency';
+                case 'decision':
+                    return 'select';
+            }
+        }
+        else {
+            throw new ConversionValidationException(typings_1.ConversionExceptionTypes.FIELD_MUST_HAVE_FIELD_TYPE_OR_COMP_TYPE);
+        }
+    }
+    function getFormCompFromProp(formDefs, prop, compType, testing, compKey, needToCompareTypes) {
         var foundComp = undefined;
         formDefs.find(function (formDef) {
             eachComponent(formDef.components, function (comp) {
-                if (comp.key == prop) {
+                var _a;
+                if (comp.key == compType) {
                     foundComp = comp;
-                    return true;
+                    if (foundComp && testing) {
+                        return true;
+                    }
+                    else if (foundComp) {
+                        var checkForEmployeeInfo = ((_a = foundComp === null || foundComp === void 0 ? void 0 : foundComp.type) === null || _a === void 0 ? void 0 : _a.split('-')[0]) === 'employeeInfo';
+                        if (checkForEmployeeInfo) {
+                            throw new ConversionValidationException(typings_1.ConversionExceptionTypes.EMPLOYY_SSO_FIELDS_NOT_SUPPORTED);
+                        }
+                        var typeMap = form_field_type_map_1.formFieldTypeMap;
+                        /// change to also check clientID
+                        var mapValForFoundComp = typeMap[foundComp.key];
+                        var formatForFoundComp = getFormatByTypeOrField(mapValForFoundComp.type, undefined);
+                        var formatForEvaluatedComp = getFormatByTypeOrField(undefined, compType);
+                        if (formatForFoundComp == formatForEvaluatedComp || !needToCompareTypes) {
+                            return true;
+                        }
+                        else {
+                            throw new ConversionValidationException(typings_1.ConversionExceptionTypes.COMPONENT_NOT_ON_FORM);
+                        }
+                    }
+                    else {
+                        throw new ConversionValidationException(typings_1.ConversionExceptionTypes.FIELD_MUST_HAVE_FIELD_TYPE_OR_COMP_TYPE);
+                    }
                 }
+                throw new ConversionValidationException(typings_1.ConversionExceptionTypes.UNABLE_TO_FIND_FIELD);
             });
             return foundComp;
         });
         return foundComp;
     }
-    function getColumn(node, evaluateLeft, compKey, formDefs, compType) {
+    function getColumn(node, evaluateLeft, compKey, formDefs, compType, testing, needToCompareTypes) {
         var _a, _b, _c, _d, _e;
         // validate that it exists on form
         var logicalGroup = evaluateLeft ? node.left : node.right;
@@ -601,7 +661,7 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
         var prop = (_e = (((_c = logicalGroup === null || logicalGroup === void 0 ? void 0 : logicalGroup.property) === null || _c === void 0 ? void 0 : _c.name) || ((_d = logicalGroup === null || logicalGroup === void 0 ? void 0 : logicalGroup.property) === null || _d === void 0 ? void 0 : _d.value))) !== null && _e !== void 0 ? _e : false;
         var root;
         if (obj && prop) {
-            var compFromForm = getFormCompFromProp(formDefs, prop);
+            var compFromForm = getFormCompFromProp(formDefs, compType, prop, testing, compKey, needToCompareTypes);
             if (compFromForm) {
                 if (exports.standardFieldKeys.includes(compFromForm.type)) {
                     root = 'application';
@@ -715,13 +775,14 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
         }
         return guidResponse;
     }
-    function convertArrayOfFormDefs(arrayOfFormDef) {
+    function convertArrayOfFormDefs(arrayOfFormDef, testing) {
+        if (testing === void 0) { testing = false; }
         // add columns for conversion types
         // validation converted
         // display converted
         // 
         // if no outcomes don't add form def
-        var conversionResult = convertFormDefinitions(arrayOfFormDef);
+        var conversionResult = convertFormDefinitions(arrayOfFormDef, testing);
         var formDefs;
         if (conversionResult.formDefs[0].tabName) {
             formDefs = conversionResult.formDefs;
@@ -751,7 +812,7 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
         });
         return passes;
     }
-    function getValidationChunk(node, evaluateLeft, compType, formDefs) {
+    function getValidationChunk(node, evaluateLeft, compType, formDefs, compKey, testing) {
         var _a, _b;
         var validationChunk = {
             type: 'column',
@@ -776,7 +837,7 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
             }
             else if ((evaluationNode === null || evaluationNode === void 0 ? void 0 : evaluationNode.type) === NodeType.MEMBER_EXPRESSION) {
                 // this is columns
-                var columns = getColumn(node.test, evaluateLeft, undefined, formDefs, compType);
+                var columns = getColumn(node.test, evaluateLeft, compKey, formDefs, compType, testing, false);
                 if (columns.length) {
                     validationChunk.type = 'column';
                     validationChunk.columns = columns;
@@ -833,7 +894,7 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
         }
         return conversionOutcomeReport;
     }
-    function convertFormDefinitions(defs) {
+    function convertFormDefinitions(defs, testing) {
         var conversionOutcomeReport = {};
         var conversionErrorReport = {};
         var formDefs = defs.map(function (formDef) {
@@ -846,7 +907,7 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
                         if (comp.customConditional || comp.calculateValue || ((_a = comp.validate) === null || _a === void 0 ? void 0 : _a.custom)) {
                             if (comp.customConditional) {
                                 var cleanCustomConditional = scrubJSString(comp.customConditional);
-                                var conditionalLogic = convertCustomJS(cleanCustomConditional, typings_1.CustomJSLogicType.DISPLAY, comp.type, undefined, comp.key, defs);
+                                var conditionalLogic = convertCustomJS(cleanCustomConditional, typings_1.CustomJSLogicType.DISPLAY, comp.type, undefined, comp.key, defs, testing);
                                 if (conditionalLogic && conditionalLogic.result) {
                                     comp.conditionalLogic = conditionalLogic.result;
                                     delete comp.customConditional;
@@ -855,7 +916,7 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
                             }
                             if (comp.calculateValue) {
                                 var cleanCalculateValue = scrubJSString(comp.calculateValue);
-                                var conditionalValue = convertCustomJS(cleanCalculateValue, typings_1.CustomJSLogicType.CALCULATED_VALUE, comp.type, undefined, comp.key, defs);
+                                var conditionalValue = convertCustomJS(cleanCalculateValue, typings_1.CustomJSLogicType.CALCULATED_VALUE, comp.type, undefined, comp.key, defs, testing);
                                 if (conditionalValue && conditionalValue.result) {
                                     switch (conditionalValue.resultType) {
                                         case 'formula':
@@ -874,7 +935,7 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
                             }
                             if ((_c = comp.validate) === null || _c === void 0 ? void 0 : _c.custom) {
                                 var cleanValidationString = scrubJSString(comp.validate.custom);
-                                var customValidation = convertCustomJS(cleanValidationString, typings_1.CustomJSLogicType.VALIDITY, comp.type, (_d = comp.validate) === null || _d === void 0 ? void 0 : _d.customMessage, comp.key, defs);
+                                var customValidation = convertCustomJS(cleanValidationString, typings_1.CustomJSLogicType.VALIDITY, comp.type, (_d = comp.validate) === null || _d === void 0 ? void 0 : _d.customMessage, comp.key, defs, testing);
                                 if (customValidation) {
                                     // if custom validation chunk is value, map to ref field prop
                                     comp.customValidation = customValidation.result;
@@ -888,7 +949,6 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
                         }
                     }
                     catch (e) {
-                        // console.log(e)
                         var error = e;
                         if ('errorType' in error) {
                             addConversionErrorToReport(conversionErrorReport, comp.type, error.errorType);
@@ -923,25 +983,25 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
         JS = singleCondition;
         testsPass = false;
         try {
-            componentsWithoutJSResults = convertArrayOfFormDefs(test_components_1.componentsWithoutCustomJS);
+            componentsWithoutJSResults = convertArrayOfFormDefs(test_components_1.componentsWithoutCustomJS, true);
             // should have no results because no logic
             chai_1.expect(componentsWithoutJSResults.conversionErrorReport).to.equal('{}');
             chai_1.expect(componentsWithoutJSResults.conversionOutcomeReport).to.equal('{}');
-            componentsWithValidationResults = convertArrayOfFormDefs(test_components_1.componentsWithValidationJS);
+            componentsWithValidationResults = convertArrayOfFormDefs(test_components_1.componentsWithValidationJS, true);
             validationResultsParsed = JSON.parse(componentsWithValidationResults.conversionOutcomeReport);
             validationPasses = everyResultItemMatchesOutcomeAndType(validationResultsParsed, typings_1.ConversionOutcome.SUCCESS, typings_1.CustomJSLogicType.VALIDITY);
             // should not have any errors
             chai_1.expect(componentsWithValidationResults.conversionErrorReport).to.equal('{}');
             // all conversions should pass
             chai_1.expect(validationPasses).to.be.true;
-            componentsWithDisplayResults = convertArrayOfFormDefs(test_components_1.componentsWithDisplayJS);
+            componentsWithDisplayResults = convertArrayOfFormDefs(test_components_1.componentsWithDisplayJS, true);
             displayResultsParsed = JSON.parse(componentsWithDisplayResults.conversionOutcomeReport);
             displayPasses = everyResultItemMatchesOutcomeAndType(displayResultsParsed, typings_1.ConversionOutcome.SUCCESS, typings_1.CustomJSLogicType.DISPLAY);
             // should not have any errors
             chai_1.expect(componentsWithDisplayResults.conversionErrorReport).to.equal('{}');
             // all conversions should pass
             chai_1.expect(displayPasses).to.be.true;
-            componentsWithCalculateValueResults = convertArrayOfFormDefs(test_components_1.componentsWithCalculateValue);
+            componentsWithCalculateValueResults = convertArrayOfFormDefs(test_components_1.componentsWithCalculateValue, true);
             calculateValueResultsParsed = JSON.parse(componentsWithCalculateValueResults.conversionOutcomeReport);
             calculateValuePasses = everyResultItemMatchesOutcomeAndType(calculateValueResultsParsed, typings_1.ConversionOutcome.SUCCESS, typings_1.CustomJSLogicType.CALCULATED_VALUE);
             // should not have any errors
@@ -949,9 +1009,9 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
             // all conversions should pass
             chai_1.expect(calculateValuePasses).to.be.true;
             test_components_1.testSets.forEach(function (testSet, index) {
-                var _a, _b, _c;
+                var _a, _b;
                 // TODO, is needed?
-                var convertedTestSet = convertArrayOfFormDefs(testSet[0]);
+                var convertedTestSet = convertArrayOfFormDefs(testSet[0], true);
                 var convertedTestsetParsed = JSON.parse(convertedTestSet.definition) instanceof (Array) ? JSON.parse(convertedTestSet.definition)[0] : JSON.parse(convertedTestSet.definition);
                 var convertedTestSetParsed = convertedTestsetParsed.components;
                 // maybe add check for each type of logic and then compare?
@@ -962,8 +1022,7 @@ var JSParser = function () { return __awaiter(void 0, void 0, void 0, function (
                     chai_1.expect(convertedTestSetParsed[0].customValidation.conditions).excluding('identifier').to.deep.equal((_a = testSet[1][0].components[0].customValidation) === null || _a === void 0 ? void 0 : _a.conditions);
                 }
                 if (convertedTestSetParsed[0].conditionalLogic) {
-                    console.log((_b = testSet[1][0].components[0].conditionalLogic) === null || _b === void 0 ? void 0 : _b.conditions);
-                    chai_1.expect(convertedTestSetParsed[0].conditionalLogic.conditions).excluding('identifier').to.deep.equal((_c = testSet[1][0].components[0].conditionalLogic) === null || _c === void 0 ? void 0 : _c.conditions);
+                    chai_1.expect(convertedTestSetParsed[0].conditionalLogic.conditions).excluding('identifier').to.deep.equal((_b = testSet[1][0].components[0].conditionalLogic) === null || _b === void 0 ? void 0 : _b.conditions);
                 }
                 if (convertedTestSetParsed[0].conditionalValue) {
                     chai_1.expect(convertedTestSetParsed[0].conditionalValue).excluding('identifier').to.deep.equal(testSet[1][0].components[0].conditionalValue);

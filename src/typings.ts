@@ -22,12 +22,35 @@ export enum ConversionExceptionTypes {
   UNKNOWN_ERROR_ADAPTING_COMP = "Unknown error adapting component",
   FORMULA_MUST_BE_ADDITIONS = "Formula must be addition",
   UNABLE_TO_INFER_FORM_FORMAT = "Unable to infer form format",
-  CALL_EXPRESSIONS_NOT_SUPPORTED = "Call expressions not supported"
+  CALL_EXPRESSIONS_NOT_SUPPORTED = "Call expressions not supported",
+  REF_FIELD_TYPES_MUST_MATCH = "Reference field types must match",
+  FIELD_MUST_HAVE_FIELD_TYPE_OR_COMP_TYPE = "Field must have field type or comp type",
+  FIELDS_MUST_MATCH_TYPE_FOR_THIS_LOGIC = "Fields must match type for this logic",
+  EMPLOYY_SSO_FIELDS_NOT_SUPPORTED = 'Employee SSO fields not supported',
+  UNABLE_TO_FIND_FIELD = "Unable to find component"
 }
 export interface ConversionErrorReport {
   [x: string]: {
-    errorType: ConversionExceptionTypes
+    errorType: 
+    ConversionExceptionTypes
   }[]
+}
+export enum ReferenceFieldTypes {
+  TextField = 'TextField',
+  TextArea = 'TextArea',
+  CustomDataTable = 'CustomDataTable',
+  Number = 'Number',
+  Checkbox = 'Checkbox',
+  Date = 'Date',
+  Radio = 'Radio',
+  SelectBoxes = 'Selectboxes',
+  FileUpload = 'FileUpload',
+  ExternalAPI = 'ExternalAPI',
+  Aggregate = 'Aggregate',
+  Table = 'Table',
+  Currency = 'Currency',
+  Subset = 'Subset',
+  DataPoint = 'DataPoint'
 }
 export interface OutcomeItem {
   outcome: ConversionOutcome;

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.formDefinitionsForTest = exports.FormulaStepValueType = exports.FormulaEvaluationType = exports.FilterModalTypes = exports.EvaluationType = exports.ConditionalLogicResultType = exports.CustomJSLogicType = exports.ConversionOutcome = exports.ConversionExceptionTypes = void 0;
+exports.formDefinitionsForTest = exports.FormulaStepValueType = exports.FormulaEvaluationType = exports.FilterModalTypes = exports.EvaluationType = exports.ConditionalLogicResultType = exports.CustomJSLogicType = exports.ConversionOutcome = exports.ReferenceFieldTypes = exports.ConversionExceptionTypes = void 0;
 var ConversionExceptionTypes;
 (function (ConversionExceptionTypes) {
     ConversionExceptionTypes["UNKOWN_ERROR"] = "Unknown error";
@@ -26,7 +26,30 @@ var ConversionExceptionTypes;
     ConversionExceptionTypes["FORMULA_MUST_BE_ADDITIONS"] = "Formula must be addition";
     ConversionExceptionTypes["UNABLE_TO_INFER_FORM_FORMAT"] = "Unable to infer form format";
     ConversionExceptionTypes["CALL_EXPRESSIONS_NOT_SUPPORTED"] = "Call expressions not supported";
+    ConversionExceptionTypes["REF_FIELD_TYPES_MUST_MATCH"] = "Reference field types must match";
+    ConversionExceptionTypes["FIELD_MUST_HAVE_FIELD_TYPE_OR_COMP_TYPE"] = "Field must have field type or comp type";
+    ConversionExceptionTypes["FIELDS_MUST_MATCH_TYPE_FOR_THIS_LOGIC"] = "Fields must match type for this logic";
+    ConversionExceptionTypes["EMPLOYY_SSO_FIELDS_NOT_SUPPORTED"] = "Employee SSO fields not supported";
+    ConversionExceptionTypes["UNABLE_TO_FIND_FIELD"] = "Unable to find component";
 })(ConversionExceptionTypes = exports.ConversionExceptionTypes || (exports.ConversionExceptionTypes = {}));
+var ReferenceFieldTypes;
+(function (ReferenceFieldTypes) {
+    ReferenceFieldTypes["TextField"] = "TextField";
+    ReferenceFieldTypes["TextArea"] = "TextArea";
+    ReferenceFieldTypes["CustomDataTable"] = "CustomDataTable";
+    ReferenceFieldTypes["Number"] = "Number";
+    ReferenceFieldTypes["Checkbox"] = "Checkbox";
+    ReferenceFieldTypes["Date"] = "Date";
+    ReferenceFieldTypes["Radio"] = "Radio";
+    ReferenceFieldTypes["SelectBoxes"] = "Selectboxes";
+    ReferenceFieldTypes["FileUpload"] = "FileUpload";
+    ReferenceFieldTypes["ExternalAPI"] = "ExternalAPI";
+    ReferenceFieldTypes["Aggregate"] = "Aggregate";
+    ReferenceFieldTypes["Table"] = "Table";
+    ReferenceFieldTypes["Currency"] = "Currency";
+    ReferenceFieldTypes["Subset"] = "Subset";
+    ReferenceFieldTypes["DataPoint"] = "DataPoint";
+})(ReferenceFieldTypes = exports.ReferenceFieldTypes || (exports.ReferenceFieldTypes = {}));
 var ConversionOutcome;
 (function (ConversionOutcome) {
     ConversionOutcome[ConversionOutcome["SUCCESS"] = 0] = "SUCCESS";
