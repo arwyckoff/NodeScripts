@@ -3,7 +3,7 @@ import { expect } from 'chai';
 import chaiExclude from 'chai-exclude';
 import csv from 'csv-parser';
 import * as fs from 'fs';
-import { formFieldTypeMap } from './form_field_type_map';
+import { FieldsArray } from './Fields_Map';
 import { componentsWithCalculateValue, componentsWithDisplayJS, componentsWithoutCustomJS, componentsWithValidationJS, testSets } from './test-components';
 import { BaseApplicationForLogic, ConditionalLogicResultType, ConversionErrorReport, ConversionExceptionTypes, ConversionOutcome, ConversionOutcomeReport, CustomJSLogicType, CustomValidationFromConversion, EvaluationType, FilterModalTypes, FormDefinitionComponent, FormulaStepValueType, GlobalLogicGroup, GlobalValueLogicGroup, LogicColumn, LogicCondition, LogicGroup, OutcomeItem, ReferenceFieldTypes } from './typings';
 const chai = require('chai')
@@ -205,7 +205,8 @@ const JSParser: () => Promise<void> = async () => {
     customMessage: string|undefined,
     compKey: string,
     formDefs: string[],
-    testing: boolean
+    testing: boolean,
+    clientId?: number
   ): {result: any, resultType: 'setValue'|'formula'|'display'|'validation'}|void {
     const parsed = acorn.Parser.parseExpressionAt(customJS, 0, parserOptions) as unknown as AcornNode;
     // first we have to check that the JS has a structure like "variable ="
@@ -227,7 +228,8 @@ const JSParser: () => Promise<void> = async () => {
               compType,
               compKey,
               formDefs,
-              testing
+              testing,
+              clientId
             );
 
             return {
@@ -242,7 +244,8 @@ const JSParser: () => Promise<void> = async () => {
               formDefs,
               compType,
               compKey,
-              testing
+              testing,
+              clientId
             );
             return result;
 
@@ -253,7 +256,8 @@ const JSParser: () => Promise<void> = async () => {
               customMessage,
               formDefs,
               compKey,
-              testing
+              testing,
+              clientId
             );
             // the value may be on the left or right node or may be null
             const validationResult = getValidationResult(customValidation);
@@ -267,9 +271,10 @@ const JSParser: () => Promise<void> = async () => {
         }
         // console.info(JSONResponse);
       } catch (e) {
-        throw new ConversionValidationException(
-          ConversionExceptionTypes.UNKNOWN_ERROR_ADAPTING_COMP
-        );
+        console.log(e)
+        // throw new ConversionValidationException(
+        //   ConversionExceptionTypes.UNKNOWN_ERROR_ADAPTING_COMP
+        // );
       }
     }
     function getAdaptedValue (
@@ -354,7 +359,8 @@ const JSParser: () => Promise<void> = async () => {
     customMessage: string|undefined,
     formDefs: string[],
     compKey: string,
-    testing: boolean
+    testing: boolean,
+    clientId?: number
   ) {
     // ex. "valid = data.thing1 > value ? true : 'this is not right"
     let comparison;
@@ -369,8 +375,8 @@ const JSParser: () => Promise<void> = async () => {
              node.alternate.type === NodeType.LITERAL
         ) {
           // get column or static value from left
-          leftChunk = getValidationChunk(node, true, compType, formDefs, compKey, testing);
-          rightChunk = getValidationChunk(node, false, compType, formDefs, compKey, testing);
+          leftChunk = getValidationChunk(node, true, compType, formDefs, compKey, testing, clientId);
+          rightChunk = getValidationChunk(node, false, compType, formDefs, compKey, testing, clientId);
           comparison = getComparison(node.test);
 
         } else {
@@ -434,7 +440,8 @@ const JSParser: () => Promise<void> = async () => {
     compType: string,
     compkey: string,
     formDefs: string[],
-    testing: boolean
+    testing: boolean,
+    clientId?: number
   ) :GlobalLogicGroup<BaseApplicationForLogic> {
     let conditions = getConditionsFromJSString(
       node,
@@ -444,7 +451,8 @@ const JSParser: () => Promise<void> = async () => {
       0,
       formDefs,
       testing,
-      false
+      false,
+      clientId
     ) as any;
       let flattenedConditions;
       if (conditions?.conditions) {
@@ -468,18 +476,19 @@ const JSParser: () => Promise<void> = async () => {
     formDefs: string[],
     compType: string,
     compKey: string,
-    testing: boolean
+    testing: boolean,
+    clientId?: number
     ): any[] {
     const values = [];
     if (node.left.left && node.left.operator === AcornOperator.PLUS) {
-      const baseCol = getColumn(node, false, compKey, formDefs, compType, testing, true);
+      const baseCol = getColumn(node, false, compKey, formDefs, compType, testing, true, clientId);
       values.push(
-        ...recursGetColumnsForMathString(node.left, formDefs, compType, compKey, testing),
+        ...recursGetColumnsForMathString(node.left, formDefs, compType, compKey, testing, clientId),
         baseCol
       )
     } else if (node.operator === AcornOperator.PLUS) {
-      const leftCol = getColumn(node, true, compKey, formDefs, compType, testing, true);
-      const rightCol = getColumn(node, false, compKey, formDefs, compType, testing, true);
+      const leftCol = getColumn(node, true, compKey, formDefs, compType, testing, true, clientId);
+      const rightCol = getColumn(node, false, compKey, formDefs, compType, testing, true, clientId);
       values.push(leftCol, rightCol);
     } else {
       // error as we are only handling addition currently
@@ -495,14 +504,16 @@ const JSParser: () => Promise<void> = async () => {
     formDefs: string[],
     compType: string,
     compKey: string,
-    testing: boolean
+    testing: boolean,
+    clientId?: number
   ): any {
     const values = recursGetColumnsForMathString(
       node,
       formDefs,
       compType,
       compKey,
-      testing
+      testing,
+      clientId
     );
     // if all values have items in array
     const allValuesHaveData = values.every((v) => v.length > 0);
@@ -531,7 +542,8 @@ const JSParser: () => Promise<void> = async () => {
     formDefs: string[],
     compType: string,
     compKey: string,
-    testing: boolean
+    testing: boolean,
+    clientId?: number
   ): GlobalValueLogicGroup<string|number|boolean|string[], string|number|boolean|string[]>|void {
     if (node.type === NodeType.LITERAL) {
       // if type is Literal, this is set value and is static
@@ -546,7 +558,7 @@ const JSParser: () => Promise<void> = async () => {
       }
     } else if (node.type === NodeType.MEMBER_EXPRESSION) {
     // if type is memberExpression, this is setting to the value of another field like value = data.thing1, this is set value and is based on another form field
-    const column = getColumn(parentNode, false, compKey, formDefs, compType, testing, true);
+    const column = getColumn(parentNode, false, compKey, formDefs, compType, testing, true, clientId);
     return {
       conditions: [],
       evaluationType: EvaluationType.AlwaysTrue,
@@ -569,20 +581,21 @@ const JSParser: () => Promise<void> = async () => {
     formDefs: string[],
     compType: string,
     compKey: string,
-    testing: boolean
+    testing: boolean,
+    clientId?: number
   ): {
     result: any,
     resultType: 'setValue'|'formula'
   } {
     let result;
     if (node.type === NodeType.BINARY_EXPRESSION) {
-      result = getFormulaFromBinaryExpressionNode(node, formDefs, compType, compKey, testing)
+      result = getFormulaFromBinaryExpressionNode(node, formDefs, compType, compKey, testing, clientId)
       return {
         result,
         resultType: 'formula'
       }
     } else {
-      result = getSetValueFromJSString(node, parentNode, formDefs, compType, compKey, testing);
+      result = getSetValueFromJSString(node, parentNode, formDefs, compType, compKey, testing, clientId);
       return {
         result,
         resultType: 'setValue'
@@ -597,7 +610,8 @@ const JSParser: () => Promise<void> = async () => {
     depth: number,
     formDefs: string[],
     testing: boolean,
-    needToCompareTypes: boolean
+    needToCompareTypes: boolean,
+    clientId?: number
   ): LogicGroup<BaseApplicationForLogic>|LogicCondition<BaseApplicationForLogic, LogicColumn<BaseApplicationForLogic>> {
     let conditions;
     let comparison;
@@ -612,8 +626,8 @@ const JSParser: () => Promise<void> = async () => {
     if (multipleConditionsCheck.isMultipleConditions) {
       let left = node.left;
       let right = node.right;
-      const leftCondition = left ? getConditionsFromJSString(left, node, compType, compKey, depth + 1, formDefs, testing, needToCompareTypes) : [];
-      const rightCondition = right ? getConditionsFromJSString(right, node, compType, compKey, depth + 1, formDefs, testing, needToCompareTypes) : []; 
+      const leftCondition = left ? getConditionsFromJSString(left, node, compType, compKey, depth + 1, formDefs, testing, needToCompareTypes, clientId) : [];
+      const rightCondition = right ? getConditionsFromJSString(right, node, compType, compKey, depth + 1, formDefs, testing, needToCompareTypes, clientId) : []; 
       
       conditions = [
         leftCondition,
@@ -648,8 +662,8 @@ const JSParser: () => Promise<void> = async () => {
       }
     }
     comparison = getComparison(node);
-    sourceColumn = getColumn(node, true, compKey, formDefs, compType, testing, needToCompareTypes);
-    relatedColumn = getColumn(node, false, compKey, formDefs, compType, testing, needToCompareTypes);
+    sourceColumn = getColumn(node, true, compKey, formDefs, compType, testing, needToCompareTypes, clientId);
+    relatedColumn = getColumn(node, false, compKey, formDefs, compType, testing, needToCompareTypes, clientId);
     value = getValue(node);
     useAnd = multipleConditionsCheck.useAnd || false;
     
@@ -729,7 +743,8 @@ const JSParser: () => Promise<void> = async () => {
     compType: string,
     testing: boolean,
     compKey: string,
-    needToCompareTypes: boolean
+    needToCompareTypes: boolean,
+    clientId?: number
   ): FormDefinitionComponent|undefined {
     let foundComp: FormDefinitionComponent|undefined = undefined;
     formDefs.find((formDef) => {
@@ -738,18 +753,26 @@ const JSParser: () => Promise<void> = async () => {
           foundComp = comp;
           if (foundComp && testing) {
             return true;
-          } else if (foundComp) {
+          } else if (foundComp && clientId) {
             const checkForEmployeeInfo = foundComp?.type?.split('-')[0] === 'employeeInfo';
             if (checkForEmployeeInfo) {
               throw new ConversionValidationException(
                 ConversionExceptionTypes.EMPLOYY_SSO_FIELDS_NOT_SUPPORTED
               );
             }
-            const typeMap = formFieldTypeMap as any;
-            /// change to also check clientID
-            const mapValForFoundComp = typeMap[foundComp.key]
+            const mapValForFoundComp = FieldsArray.find((field) => {
+              const clientMatches: boolean = +field.clientId === +clientId;
+              const keyMatches: boolean = field.key === foundComp?.key;
+
+              return clientMatches && keyMatches;
+            })
+            if (!mapValForFoundComp) {
+              throw new ConversionValidationException(
+                ConversionExceptionTypes.UNABLE_TO_FIND_FIELD
+              );
+            }
             const formatForFoundComp = getFormatByTypeOrField(
-              mapValForFoundComp.type,
+              mapValForFoundComp?.type,
               undefined
             );
             const formatForEvaluatedComp = getFormatByTypeOrField(
@@ -785,7 +808,8 @@ const JSParser: () => Promise<void> = async () => {
     formDefs: any[],
     compType: string,
     testing: boolean,
-    needToCompareTypes: boolean
+    needToCompareTypes: boolean,
+    clientId?: number
   ): string[] {
     // validate that it exists on form
     const logicalGroup = evaluateLeft ? node.left : node.right;
@@ -800,7 +824,8 @@ const JSParser: () => Promise<void> = async () => {
         prop,
         testing,
         compKey,
-        needToCompareTypes
+        needToCompareTypes,
+        clientId
       );
       if (compFromForm) {
         if (standardFieldKeys.includes(compFromForm.type)) {
@@ -1000,7 +1025,31 @@ const JSParser: () => Promise<void> = async () => {
     console.log(e)
     testsPass = false;
   }
-  
+  // GENERATING TYPE MAP
+  // let array: any[] = [];
+  // fs.createReadStream(
+  //   '/Users/drew.wyckoff/Projects/Node scripts/src/All_Fields_QA.csv'
+  // )
+  // .pipe((csv()))
+  // .on('data', (chunk) => {
+  //   const type = chunk.type
+  //   const key = chunk['Key']
+  //   const clientId = chunk['ClientId']
+
+  //   array.push({
+  //     type,
+  //     key,
+  //     clientId
+  //   })
+  // })
+  // .on('end', () => {
+  //   const data = JSON.stringify(array);
+  //   fs.writeFileSync(
+  //     '/Users/drew.wyckoff/Projects/Node scripts/src/Fields_Map.json',
+  //     data
+  //   )
+  // })
+
   // CONVERSION
   let data: any[] = [];
   if (testsPass) {
@@ -1011,9 +1060,10 @@ const JSParser: () => Promise<void> = async () => {
       .on('data', (chunk) => {
         try {
           const formDef = JSON.parse(chunk.definition);
+          const clientId = JSON.parse(chunk.clientId);
   
           const arrayOfFormDef = formDef instanceof Array ? formDef : [formDef];
-          let conversionResult = convertArrayOfFormDefs(arrayOfFormDef);
+          let conversionResult = convertArrayOfFormDefs(arrayOfFormDef, false, clientId);
           if (conversionResult.conversionErrorReport !== '{}' ||
               conversionResult.conversionOutcomeReport !== '{}'
           ) {
@@ -1069,14 +1119,15 @@ const JSParser: () => Promise<void> = async () => {
   }
   function convertArrayOfFormDefs (
     arrayOfFormDef: string[],
-    testing = false
+    testing = false,
+    clientId?: number
   ) {
     // add columns for conversion types
     // validation converted
     // display converted
     // 
     // if no outcomes don't add form def
-    let conversionResult = convertFormDefinitions(arrayOfFormDef, testing);
+    let conversionResult = convertFormDefinitions(arrayOfFormDef, testing, clientId);
     let formDefs;
     if (conversionResult.formDefs[0].tabName) {
       formDefs = conversionResult.formDefs;
@@ -1120,7 +1171,8 @@ const JSParser: () => Promise<void> = async () => {
     compType: string,
     formDefs: string[],
     compKey: string,
-    testing: boolean
+    testing: boolean,
+    clientId?: number
   ) {
     let validationChunk: {
       type: 'column' | 'value' | 'literal',
@@ -1150,7 +1202,7 @@ const JSParser: () => Promise<void> = async () => {
         }
       } else if (evaluationNode?.type === NodeType.MEMBER_EXPRESSION) {
         // this is columns
-        const columns = getColumn(node.test, evaluateLeft, compKey, formDefs, compType, testing, false);
+        const columns = getColumn(node.test, evaluateLeft, compKey, formDefs, compType, testing, false, clientId);
         if (columns.length) {
           validationChunk.type = 'column';
           validationChunk.columns = columns;
@@ -1213,11 +1265,10 @@ const JSParser: () => Promise<void> = async () => {
       return conversionOutcomeReport;
   }
 
-  function convertFormDefinitions (defs: any[], testing: boolean) {
+  function convertFormDefinitions (defs: any[], testing: boolean, clientId?: number) {
     const conversionOutcomeReport: ConversionOutcomeReport = {};
     const conversionErrorReport: ConversionErrorReport = {};
     const formDefs = defs.map((formDef: any) => {
-      // let adaptedComps: FormDefinitionComponent[] = [];
       try {
         eachComponent(formDef.components, (comp) => {
           try {
@@ -1232,7 +1283,8 @@ const JSParser: () => Promise<void> = async () => {
                   undefined,
                   comp.key,
                   defs,
-                  testing
+                  testing,
+                  clientId
                 );
                 if (conditionalLogic && conditionalLogic.result) {
                 
@@ -1256,7 +1308,8 @@ const JSParser: () => Promise<void> = async () => {
                   undefined,
                   comp.key,
                   defs,
-                  testing
+                  testing,
+                  clientId
                 );
                 if (conditionalValue && conditionalValue.result) {
                   switch (conditionalValue.resultType) {
@@ -1292,7 +1345,8 @@ const JSParser: () => Promise<void> = async () => {
                   comp.validate?.customMessage,
                   comp.key,
                   defs,
-                  testing
+                  testing,
+                  clientId
                 );
                 if (customValidation) {
                   // if custom validation chunk is value, map to ref field prop
@@ -1329,6 +1383,7 @@ const JSParser: () => Promise<void> = async () => {
 
         return formDef
       } catch (e) {
+        console.log(e)
         throw new ConversionValidationException(ConversionExceptionTypes.UNKNOWN_ERROR_ADAPTING_COMP)
       }
     });

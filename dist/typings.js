@@ -30,7 +30,7 @@ var ConversionExceptionTypes;
     ConversionExceptionTypes["FIELD_MUST_HAVE_FIELD_TYPE_OR_COMP_TYPE"] = "Field must have field type or comp type";
     ConversionExceptionTypes["FIELDS_MUST_MATCH_TYPE_FOR_THIS_LOGIC"] = "Fields must match type for this logic";
     ConversionExceptionTypes["EMPLOYY_SSO_FIELDS_NOT_SUPPORTED"] = "Employee SSO fields not supported";
-    ConversionExceptionTypes["UNABLE_TO_FIND_FIELD"] = "Unable to find component";
+    ConversionExceptionTypes["UNABLE_TO_FIND_FIELD"] = "Unable to find component on form";
 })(ConversionExceptionTypes = exports.ConversionExceptionTypes || (exports.ConversionExceptionTypes = {}));
 var ReferenceFieldTypes;
 (function (ReferenceFieldTypes) {

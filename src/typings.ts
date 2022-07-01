@@ -27,7 +27,7 @@ export enum ConversionExceptionTypes {
   FIELD_MUST_HAVE_FIELD_TYPE_OR_COMP_TYPE = "Field must have field type or comp type",
   FIELDS_MUST_MATCH_TYPE_FOR_THIS_LOGIC = "Fields must match type for this logic",
   EMPLOYY_SSO_FIELDS_NOT_SUPPORTED = 'Employee SSO fields not supported',
-  UNABLE_TO_FIND_FIELD = "Unable to find component"
+  UNABLE_TO_FIND_FIELD = "Unable to find component on form"
 }
 export interface ConversionErrorReport {
   [x: string]: {
