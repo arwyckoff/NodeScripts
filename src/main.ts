@@ -108,7 +108,6 @@ class ConversionValidationException extends Error {
     public errorType: ConversionExceptionTypes
   ) {
     super('CONVERSION EXCEPTION:' + errorType);
-    console.log(errorType);
   }
 }
 
@@ -266,16 +265,7 @@ const JSParser: () => Promise<void> = async () => {
               result: validationResult,
               resultType: 'validation'
             }
-            // new work that should get the validity logic and set the string on right node as result with result type being validationMessage
-            break;
         }
-        // console.info(JSONResponse);
-      // } catch (e) {
-      //   // console.log(e)
-      //   // throw new ConversionValidationException(
-      //   //   ConversionExceptionTypes.UNKNOWN_ERROR_ADAPTING_COMP
-      //   // );
-      // }
     }
     function getAdaptedValue (
       value: string
@@ -749,7 +739,8 @@ const JSParser: () => Promise<void> = async () => {
     let foundComp: FormDefinitionComponent|undefined = undefined;
     formDefs.find((formDef) => {
       eachComponent(formDef.components, (comp) => {
-        if (comp.key == compType) {
+        // doesnt look like we are using prop to find the correct field for evaluation
+        if (prop == comp.key) {
           foundComp = comp;
           if (foundComp && testing) {
             return true;
@@ -766,6 +757,12 @@ const JSParser: () => Promise<void> = async () => {
 
               return clientMatches && keyMatches;
             })
+            const mapValForCurrentComp = FieldsArray.find((field) => {
+              const clientMatches: boolean = +field.clientId === +clientId;
+              const keyMatches: boolean = field.key === compKey;
+
+              return clientMatches && keyMatches;
+            })
             if (!mapValForFoundComp) {
               throw new ConversionValidationException(
                 ConversionExceptionTypes.UNABLE_TO_FIND_FIELD
@@ -775,10 +772,11 @@ const JSParser: () => Promise<void> = async () => {
               mapValForFoundComp?.type,
               undefined
             );
+            const adaptedCompType = standardFieldKeys.includes(compType) ? compType : undefined;
             const formatForEvaluatedComp = getFormatByTypeOrField(
-              undefined,
-              compType
-            );
+              mapValForCurrentComp?.type,
+              adaptedCompType
+              );
             if (formatForFoundComp == formatForEvaluatedComp || !needToCompareTypes) {
               return true;
             } else {
@@ -792,10 +790,12 @@ const JSParser: () => Promise<void> = async () => {
             )
           }
         }
+      })
+      if (!foundComp) {
         throw new ConversionValidationException(
           ConversionExceptionTypes.UNABLE_TO_FIND_FIELD
         )
-      })
+      }
 
       return foundComp;
     })
@@ -820,8 +820,8 @@ const JSParser: () => Promise<void> = async () => {
     if (obj && prop) {
       const compFromForm = getFormCompFromProp(
         formDefs,
-        compType,
         prop,
+        compType,
         testing,
         compKey,
         needToCompareTypes,
@@ -1022,7 +1022,7 @@ const JSParser: () => Promise<void> = async () => {
     })
     testsPass = true;
   } catch (e) {
-    console.log(e)
+    // console.log(e)
     testsPass = false;
   }
   // GENERATING TYPE MAP
@@ -1265,6 +1265,22 @@ const JSParser: () => Promise<void> = async () => {
       return conversionOutcomeReport;
   }
 
+  function checkForUnsupportedLogic (logicString: string) {
+    if (
+      logicString.includes('.length') ||
+      logicString.includes('.filter') ||
+      logicString.includes('.every') ||
+      logicString.includes('.some') ||
+      logicString.includes('.find') || 
+      logicString.includes('.split') || 
+      logicString.includes('moment(')
+      ) {
+      throw new ConversionValidationException(
+        ConversionExceptionTypes.LOGIC_STRING_INCLUDES_UNSUPPORTED_METHOD
+      );
+    }
+  }
+
   function convertFormDefinitions (defs: any[], testing: boolean, clientId?: number) {
     const conversionOutcomeReport: ConversionOutcomeReport = {};
     const conversionErrorReport: ConversionErrorReport = {};
@@ -1272,10 +1288,12 @@ const JSParser: () => Promise<void> = async () => {
       eachComponent(formDef.components, (comp) => {
           currentComponent = comp;
           try {
+            // here o here
             // Attempt to convert each component
             if (comp.customConditional || comp.calculateValue || comp.validate?.custom) {
               if (comp.customConditional) {
                 const cleanCustomConditional = scrubJSString(comp.customConditional);
+                checkForUnsupportedLogic(cleanCustomConditional)
                 const conditionalLogic = convertCustomJS(
                   cleanCustomConditional,
                   CustomJSLogicType.DISPLAY,
@@ -1301,6 +1319,7 @@ const JSParser: () => Promise<void> = async () => {
         
               if (comp.calculateValue) {
                 const cleanCalculateValue = scrubJSString(comp.calculateValue);
+                checkForUnsupportedLogic(cleanCalculateValue)
                 const conditionalValue = convertCustomJS(
                   cleanCalculateValue,
                   CustomJSLogicType.CALCULATED_VALUE,
@@ -1338,6 +1357,7 @@ const JSParser: () => Promise<void> = async () => {
         
               if (comp.validate?.custom) {
                 const cleanValidationString = scrubJSString(comp.validate.custom);
+                checkForUnsupportedLogic(cleanValidationString)
                 const customValidation = convertCustomJS(
                   cleanValidationString,
                   CustomJSLogicType.VALIDITY,
@@ -1366,7 +1386,6 @@ const JSParser: () => Promise<void> = async () => {
           } catch (e) {
             const error = e as any;
             if ('errorType' in error) {
-              console.log(error)
               addConversionErrorToReport(
                 conversionErrorReport,
                 comp.type,
