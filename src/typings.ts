@@ -1,6 +1,5 @@
-
 export enum ConversionExceptionTypes {
-  UNKOWN_ERROR = 'Unknown error',
+  UNKNOWN_ERROR = 'Unknown error',
   MIX_BOOLEANS = 'MIX_BOOLEANS',
   BASE_OP_NOT_EQUALS = 'Base operator is not equals',
   FIRST_NODE_NOT_ASSIGNMENT = 'First Node type is not assignment',
@@ -31,9 +30,8 @@ export enum ConversionExceptionTypes {
 }
 export interface ConversionErrorReport {
   [x: string]: {
-    errorType: 
-    ConversionExceptionTypes
-  }[]
+    errorType: ConversionExceptionTypes;
+  }[];
 }
 export enum ReferenceFieldTypes {
   TextField = 'TextField',
@@ -58,7 +56,7 @@ export interface OutcomeItem {
 }
 
 export interface ConversionOutcomeReport {
-  [x: string]: OutcomeItem[]
+  [x: string]: OutcomeItem[];
 }
 export enum ConversionOutcome {
   SUCCESS,
@@ -87,7 +85,7 @@ export enum FilterModalTypes {
   equals = 'eq',
   notBlank = 'nb',
   isBlank = 'ib',
-  blank = 'bl', // replaced with 'isBlank', but may still exist for saved reports in Grants
+  blank = 'bl',
   notEqual = 'ne',
   containsList = 'or',
   contains = 'cn',
@@ -131,19 +129,15 @@ export interface BaseLogicCondition<
 export type PropColumn<T, K extends keyof T = keyof T> = [K];
 export type NestedPropColumn<T, K1 extends keyof T = keyof T, K2 extends keyof T[K1] = keyof T[K1]> = [K1, K2];
 export type NestedNestedPropColumn<T, K1 extends keyof T = keyof T, K2 extends keyof T[K1] = keyof T[K1], K3 extends keyof T[K1][K2] = keyof T[K1][K2]> = [K1, K2, K3];
-export type LogicColumn<T> = PropColumn<T>|NestedPropColumn<T>|NestedNestedPropColumn<T>;
-export type LogicColumnValue<T, C extends LogicColumn<T>> = C extends NestedNestedPropColumn<T, infer K1, infer K2, infer K3> ? T[K1][K2][K3] :
-    C extends NestedPropColumn<T, infer K1, infer K2> ? T[K1][K2] :
-    T extends PropColumn<T, infer K1> ? T[K1] :
-    unknown;
-    type Comparison<T> = T extends boolean ?
-  FilterModalTypes.equals|FilterModalTypes.notEqual :
-  FilterModalTypes;
+export type LogicColumn<T> = PropColumn<T> | NestedPropColumn<T> | NestedNestedPropColumn<T>;
+export type LogicColumnValue<T, C extends LogicColumn<T>> = C extends NestedNestedPropColumn<T, infer K1, infer K2, infer K3> ? T[K1][K2][K3] : C extends NestedPropColumn<T, infer K1, infer K2> ? T[K1][K2] : T extends PropColumn<T, infer K1> ? T[K1] : unknown;
+type Comparison<T> = T extends boolean ?
+  FilterModalTypes.equals | FilterModalTypes.notEqual : FilterModalTypes;
 export interface BaseValueLogicCondition<
   T, K extends LogicColumn<T>
 > extends BaseLogicCondition<T, K> {
   /* standard operator for two value conditions e.g. equals, greater than, etc. */
-  comparison: Exclude<Comparison<LogicColumnValue<T, K>>, FilterModalTypes.isBlank|FilterModalTypes.notBlank|FilterModalTypes.contains|FilterModalTypes.multiValueIncludes>;
+  comparison: Exclude<Comparison<LogicColumnValue<T, K>>, FilterModalTypes.isBlank | FilterModalTypes.notBlank | FilterModalTypes.contains | FilterModalTypes.multiValueIncludes>;
 }
 
 export interface ValueLogicCondition<
@@ -179,35 +173,34 @@ export interface ContainsLogicCondition<T, K extends LogicColumn<T>> extends Bas
 
 export interface NonValueLogicCondition<T, K extends LogicColumn<T>> extends BaseLogicCondition<T, K> {
   /* 'blank' and 'not blank' do not need a value */
-  comparison: FilterModalTypes.isBlank|FilterModalTypes.notBlank;
+  comparison: FilterModalTypes.isBlank | FilterModalTypes.notBlank;
 }
 export type LogicCondition<T, K extends LogicColumn<T>> =
-  ValueLogicCondition<T, K>|
-  RelatedLogicCondition<T, K, LogicColumn<T>>|
-  RelatedLogicValueCondition<T, K, LogicColumn<T>>|
-  OneOfLogicCondition<T, K>|
-  NonValueLogicCondition<T, K>|
+  ValueLogicCondition<T, K> |
+  RelatedLogicCondition<T, K, LogicColumn<T>> |
+  RelatedLogicValueCondition<T, K, LogicColumn<T>> |
+  OneOfLogicCondition<T, K> |
+  NonValueLogicCondition<T, K> |
   ContainsLogicCondition<T, K>;
 
 export interface GlobalLogicGroup<T> extends LogicGroup<T> {
   // show versus hide
   // become valid versus become invalid
   evaluationType: EvaluationType;
-  // TODO: not really applicable for non-boolean results, need to figure out more dynamic way of achieving this
 }
 export interface GlobalValueLogicGroup<T, V> extends GlobalLogicGroup<T> {
   result: V; // For set value logic, this is the value to set if the conditions pass
   resultType: ConditionalLogicResultType;
   resultConfig?: {
-    operator: 'plus'|'minus';
+    operator: 'plus' | 'minus';
     constant: number;
-    constantUnits: 'days'|'weeks'|'years';
+    constantUnits: 'days' | 'weeks' | 'years';
   };
 }
-export type LogicGroupType<T, V> = LogicGroup<T>|GlobalLogicGroup<T>|GlobalValueLogicGroup<T, V>;
+export type LogicGroupType<T, V> = LogicGroup<T> | GlobalLogicGroup<T> | GlobalValueLogicGroup<T, V>;
 export interface LogicGroup<T> {
   /* array of groups or conditions to be evaluated */
-  conditions: (LogicCondition<T, LogicColumn<T>>|LogicGroup<T>)[];
+  conditions: (LogicCondition<T, LogicColumn<T>> | LogicGroup<T>)[];
   /* require this result to be true for the next result */
   useAnd: boolean;
   identifier: string;
@@ -276,14 +269,14 @@ export interface FormDefinitionComponent {
   columns?: FormDefinitionComponent[]; // Columns
   type: string;
   conditional?: {
-    show: string|boolean;
+    show: string | boolean;
     when: string;
     json?: string;
     eq: string;
   };
   // stores the old conditional logic in case we need to access it
   oldConditonal?: {
-    show: string|boolean;
+    show: string | boolean;
     when: string;
     json?: string;
     eq: string;
@@ -361,11 +354,11 @@ export enum FormulaStepValueType {
   ParentValue = 2
 }
 
-export interface ValidationLogicChunk { 
-  type: "column" | "value" | "literal",
-  columns: string[],
-  literalVal: any,
-  isValue: boolean 
+export interface ValidationLogicChunk {
+  type: "column" | "value" | "literal";
+  columns: string[];
+  literalVal: any;
+  isValue: boolean;
 }
 
 export interface CustomValidationFromConversion { leftChunk: ValidationLogicChunk | undefined; rightChunk: ValidationLogicChunk | undefined; comparison: string | undefined; errorMsg: string | undefined; }

@@ -5,10 +5,10 @@ import csv from 'csv-parser';
 import * as fs from 'fs';
 import { FieldsArray } from './Fields_Map';
 import { componentsWithCalculateValue, componentsWithDisplayJS, componentsWithoutCustomJS, componentsWithValidationJS, testSets } from './test-components';
-import { BaseApplicationForLogic, ConditionalLogicResultType, ConversionErrorReport, ConversionExceptionTypes, ConversionOutcome, ConversionOutcomeReport, CustomJSLogicType, CustomValidationFromConversion, EvaluationType, FilterModalTypes, FormDefinitionComponent, FormulaStepValueType, GlobalLogicGroup, GlobalValueLogicGroup, LogicColumn, LogicCondition, LogicGroup, OutcomeItem, ReferenceFieldTypes } from './typings';
+import { BaseApplicationForLogic, ConditionalLogicResultType, ConversionErrorReport, ConversionExceptionTypes, ConversionOutcome, ConversionOutcomeReport, CustomJSLogicType, CustomValidationFromConversion, EvaluationType, FilterModalTypes, FormDefinitionComponent, FormulaStepValueType, GlobalLogicGroup, GlobalValueLogicGroup, LogicColumn, LogicCondition, LogicGroup, OutcomeItem, ReferenceFieldTypes } from "./typings";
 const chai = require('chai')
 chai.use(chaiExclude)
-
+let currentComponent: any;
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
  /**
    * Call a function for each component in the list and their children.
@@ -108,7 +108,7 @@ class ConversionValidationException extends Error {
     public errorType: ConversionExceptionTypes
   ) {
     super('CONVERSION EXCEPTION:' + errorType);
-    this.errorType = errorType;
+    console.log(errorType);
   }
 }
 
@@ -219,7 +219,7 @@ const JSParser: () => Promise<void> = async () => {
       // error that there are errors  or no comp type
     } else {
       // we should actually just validate that the properties are correct based on what's returned below
-      try {
+      // try {
         switch (logicType) {
           case CustomJSLogicType.DISPLAY:
             const conditionalLogic = convertJSStringToLogicGroup(
@@ -270,12 +270,12 @@ const JSParser: () => Promise<void> = async () => {
             break;
         }
         // console.info(JSONResponse);
-      } catch (e) {
-        console.log(e)
-        // throw new ConversionValidationException(
-        //   ConversionExceptionTypes.UNKNOWN_ERROR_ADAPTING_COMP
-        // );
-      }
+      // } catch (e) {
+      //   // console.log(e)
+      //   // throw new ConversionValidationException(
+      //   //   ConversionExceptionTypes.UNKNOWN_ERROR_ADAPTING_COMP
+      //   // );
+      // }
     }
     function getAdaptedValue (
       value: string
@@ -882,7 +882,7 @@ const JSParser: () => Promise<void> = async () => {
       useAnd
     }
   }
-  /**
+  /** 
    * 
    * @param node Acorn node from Acorn.parse
    * @returns an array of error strings based on possible malformed logic scenarios (e.g. data > 2 or 5 = 3)
@@ -1269,8 +1269,8 @@ const JSParser: () => Promise<void> = async () => {
     const conversionOutcomeReport: ConversionOutcomeReport = {};
     const conversionErrorReport: ConversionErrorReport = {};
     const formDefs = defs.map((formDef: any) => {
-      try {
-        eachComponent(formDef.components, (comp) => {
+      eachComponent(formDef.components, (comp) => {
+          currentComponent = comp;
           try {
             // Attempt to convert each component
             if (comp.customConditional || comp.calculateValue || comp.validate?.custom) {
@@ -1366,26 +1366,23 @@ const JSParser: () => Promise<void> = async () => {
           } catch (e) {
             const error = e as any;
             if ('errorType' in error) {
+              console.log(error)
               addConversionErrorToReport(
                 conversionErrorReport,
                 comp.type,
-                error.errorType
-              )
-            } else {
+                error?.errorType ?? ConversionExceptionTypes.UNKNOWN_ERROR
+                )
+              } else {
               addConversionErrorToReport(
                 conversionErrorReport,
                 comp.type,
-                ConversionExceptionTypes.UNKOWN_ERROR
+                ConversionExceptionTypes.UNKNOWN_ERROR
               )
             }            
           }
         });
 
         return formDef
-      } catch (e) {
-        console.log(e)
-        throw new ConversionValidationException(ConversionExceptionTypes.UNKNOWN_ERROR_ADAPTING_COMP)
-      }
     });
     const result = {
       formDefs,
