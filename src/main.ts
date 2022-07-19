@@ -1333,7 +1333,9 @@ const JSParser: () => Promise<void> = async () => {
                 if (conditionalValue && conditionalValue.result) {
                   switch (conditionalValue.resultType) {
                     case 'formula':
-                      const refFieldProp = comp.type?.split('-').join('.');
+                      const fieldObj = comp.type?.split('-')[0];
+                      const fieldProp = comp.key;
+                      const refFieldProp = fieldObj + '.' + fieldProp;
                       const formula = {
                         property: refFieldProp,
                         ...conditionalValue.result

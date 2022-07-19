@@ -60,14 +60,14 @@ export interface ConversionOutcomeReport {
   [x: string]: OutcomeItem[];
 }
 export enum ConversionOutcome {
-  SUCCESS,
-  FAILURE,
-  NOT_ATTEMPTED
+  SUCCESS = 'Success',
+  FAILURE = 'Failure',
+  NOT_ATTEMPTED = 'Not attempted'
 }
 export enum CustomJSLogicType {
-  VALIDITY,
-  DISPLAY,
-  CALCULATED_VALUE
+  VALIDITY = 'Validity',
+  DISPLAY = 'Display',
+  CALCULATED_VALUE = 'Calculated Value'
 }
 export enum ConditionalLogicResultType {
   STATIC_VALUE,
