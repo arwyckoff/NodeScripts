@@ -760,7 +760,6 @@ const JSParser: () => Promise<void> = async () => {
             const mapValForCurrentComp = FieldsArray.find((field) => {
               const clientMatches: boolean = +field.clientId === +clientId;
               const keyMatches: boolean = field.key === compKey;
-
               return clientMatches && keyMatches;
             })
             if (!mapValForFoundComp) {
@@ -828,12 +827,16 @@ const JSParser: () => Promise<void> = async () => {
         clientId
       );
       if (compFromForm) {
+        // this is for getting the property from the form config; only needed if it isn't a standard field
+        let propOverride: string = '';
         if (standardFieldKeys.includes(compFromForm.type)) {
           root = 'application';
         } else {
+          propOverride = compFromForm.type.split('-')[1];
           root = 'referenceFields';
         }
-        return [root, prop];
+
+        return [root, propOverride ?? prop];
       } else {
         throw new ConversionValidationException(
           ConversionExceptionTypes.COMPONENT_NOT_ON_FORM
@@ -1308,9 +1311,10 @@ const JSParser: () => Promise<void> = async () => {
                 
                   comp.conditionalLogic = conditionalLogic.result;
                   delete comp.customConditional;
+                  //
                   addConversionOutcomeToReport(
                     conversionOutcomeReport,
-                    comp.type,
+                    comp.label || comp.type,
                     ConversionOutcome.SUCCESS,
                     CustomJSLogicType.DISPLAY
                   )
@@ -1333,9 +1337,7 @@ const JSParser: () => Promise<void> = async () => {
                 if (conditionalValue && conditionalValue.result) {
                   switch (conditionalValue.resultType) {
                     case 'formula':
-                      const fieldObj = comp.type?.split('-')[0];
-                      const fieldProp = comp.key;
-                      const refFieldProp = fieldObj + '.' + fieldProp;
+                      const refFieldProp = comp.type?.split('-').join('.');
                       const formula = {
                         property: refFieldProp,
                         ...conditionalValue.result
@@ -1350,7 +1352,7 @@ const JSParser: () => Promise<void> = async () => {
                   }
                   addConversionOutcomeToReport(
                     conversionOutcomeReport,
-                    comp.type,
+                    comp.label || comp.type,
                     ConversionOutcome.SUCCESS,
                     CustomJSLogicType.CALCULATED_VALUE
                   )
@@ -1376,7 +1378,7 @@ const JSParser: () => Promise<void> = async () => {
                   delete comp.validate;
                   addConversionOutcomeToReport(
                     conversionOutcomeReport,
-                    comp.type,
+                    comp.label || comp.type,
                     ConversionOutcome.SUCCESS,
                     CustomJSLogicType.VALIDITY
                   )
@@ -1390,13 +1392,13 @@ const JSParser: () => Promise<void> = async () => {
             if ('errorType' in error) {
               addConversionErrorToReport(
                 conversionErrorReport,
-                comp.type,
+                comp.label || comp.type,
                 error?.errorType ?? ConversionExceptionTypes.UNKNOWN_ERROR
                 )
               } else {
               addConversionErrorToReport(
                 conversionErrorReport,
-                comp.type,
+                comp.label || comp.type,
                 ConversionExceptionTypes.UNKNOWN_ERROR
               )
             }            
